@@ -31,7 +31,6 @@ module.exports.digitize = function(id, crop_width, crop_height, across_coords, d
             // Get text from image
             get_text(puzzle._id, function(err, text) {
               if (err) return clean_up(puzzle, err);
-              console.log(text);
 
               // Split up text into clues
               get_clues(text, across_slot_nums, down_slot_nums, function (err, across_clues, down_clues) {
@@ -242,7 +241,10 @@ function get_text(id,  cb) {
 
 /* Divides up text into clues by parsing the numbers in the text. */
 function get_clues(text, across_numbers, down_numbers, cb) {
-  var look_ahead = 5;
+  var look_ahead = 5, allow_across = true, allow_down = false;
+  var across_cutoff = across_numbers[Math.floor(across_numbers.length*.8)];
+  var down_cutoff = down_numbers[Math.floor(down_numbers.length*.3)];
+  console.log("ACROSS: " + across_cutoff + " DOWN: " + down_cutoff);
   var across_clues = [], down_clues = [];
   var current = {
     num: -1,
@@ -256,30 +258,33 @@ function get_clues(text, across_numbers, down_numbers, cb) {
 
     // try across
     var success = false;
-    for (var j = 0; j < look_ahead; j++) {
-      if (j >= across_numbers.length) break;
-      if (similar_to(across_numbers[j], str)) {
-        if (current.num > 0) {
-          if (current.orientation == "across") {
-            across_clues[current.num] = current.clue;
-          } else {
-            down_clues[current.num] = current.clue;
+    if (allow_across) {
+      for (var j = 0; j < look_ahead; j++) {
+        if (j >= across_numbers.length) break;
+        if (similar_to(across_numbers[j], str)) {
+          if (current.num > 0) {
+            if (current.orientation == "across") {
+              across_clues[current.num] = current.clue;
+            } else {
+              down_clues[current.num] = current.clue;
+            }
           }
+          current = {
+            num: across_numbers[j],
+            lines: 1,
+            clue: extract_num(str, across_numbers[j]),
+            orientation: "across"
+          };
+          if (across_numbers[j] >= across_cutoff) allow_down = true;
+          across_numbers.splice(j,1);
+          success = true;
+          break;
         }
-        current = {
-          num: across_numbers[j],
-          lines: 1,
-          clue: extract_num(str, across_numbers[j]),
-          orientation: "across"
-        };
-        across_numbers.splice(j,1);
-        success = true;
-        break;
       }
     }
 
     // if not, try down
-    if (!success) {
+    if (!success && allow_down) {
       for (var j = 0; j < look_ahead; j++) {
         if (j >= down_numbers.length) break;
         if (similar_to(down_numbers[j], str)) {
@@ -296,7 +301,8 @@ function get_clues(text, across_numbers, down_numbers, cb) {
             clue: extract_num(str, down_numbers[j]),
             orientation: "down"
           };
-          down_numbers.splice(j,1);
+          if (down_numbers[j] > down_cutoff) allow_across = false;
+          down_numbers.splice(j,1);          
           success = true;
           break;
         }
@@ -339,7 +345,9 @@ function get_clues(text, across_numbers, down_numbers, cb) {
 function extract_num(str, num) {
   var len = num.toString().length;
   var trim = str.trim();
-  return trim.substr(len, trim.length).trim();
+  var extracted = trim.substr(len, trim.length).trim();
+  if (extracted[0] == '.') return extracted.substr(1, extracted.length).trim();
+  return extracted;
 }
 
 /* Check if string starts with something like the number. */
@@ -358,7 +366,7 @@ function similar_to(num, str) {
         if (c!='I' && c!='[' && c!= ']' && c!= '|' && c!='l') return false;
         break;
       case '5':
-        if (c!='s' && c!='S') return false;
+        if (c!='S') return false;
         break;
       case '9':
         if (c!='g') return false;
