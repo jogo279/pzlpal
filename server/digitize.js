@@ -82,13 +82,13 @@ module.exports.digitize = function(id, crop_width, crop_height, across_coords, d
                 if (new_slot) slot_num++;
               }
             }
-
             get_text(puzzle._id, across_coords, down_coords, crop_width, crop_height, function(err, text) {
               if (err) return clean_up(puzzle, err);
 
               // Split up text into clues
-              var across_clues = get_clues(text.across, across_slot_nums);
-              var down_clues = get_clues(text.down, down_slot_nums);
+              var clues = get_clues(text, across_slot_nums, down_slot_nums);
+              var across_clues = clues.across;
+              var down_clues = clues.down;
 
               // Add clues to slots and save
               slots.forEach(function(slot) {
@@ -120,154 +120,216 @@ function get_text(id, across_coords, down_coords, crop_width, crop_height, cb) {
   across_coords = across_coords.slice(0, 10);
   down_coords = down_coords.slice(0, 10);
 
-  // Clean image
   var dir = process.env.PZL_TMP + id + '/';
-  var clean_image = cp.exec(
-    "cp " + dir + "original.jpg " + dir + "clean.jpg",
-    function (err, stdout, stderr) {
-      if (err) {
-        console.log(err);
-        return;
+  // Get image dimensions and stretch coordinates based on difference between crop dimensions and real dimensions
+  sizeOf(dir + "original.jpg", function(err, dimensions) {
+    var real_width = dimensions.width;
+    var real_height = dimensions.height;
+    across_coords = across_coords.map(function (coords, idx) {
+      return {
+        x : coords.x * real_width / crop_width,
+        y : coords.y * real_height / crop_height,
+        x2 : coords.x2 * real_width / crop_width,
+        y2 : coords.y2 * real_height / crop_height,
+        w : coords.w * real_width / crop_width,
+        h : coords.h * real_height / crop_height,
+        orientation : "across",
+        idx: idx
       }
+    });
+    down_coords = down_coords.map(function (coords, idx) {
+      return {
+        x : coords.x * real_width / crop_width,
+        y : coords.y * real_height / crop_height,
+        x2 : coords.x2 * real_width / crop_width,
+        y2 : coords.y2 * real_height / crop_height,
+        w : coords.w * real_width / crop_width,
+        h : coords.h * real_height / crop_height,
+        orientation : "down",
+        idx: idx
+      }
+    });
 
-      // Get image dimensions and stretch coordinates based on difference between crop dimensions and real dimensions
-      sizeOf(dir + "clean.jpg", function(err, dimensions) {
-        var real_width = dimensions.width;
-        var real_height = dimensions.height;
-        across_coords = across_coords.map(function (coords, idx) {
-          return {
-            x : coords.x * real_width / crop_width,
-            y : coords.y * real_height / crop_height,
-            x2 : coords.x2 * real_width / crop_width,
-            y2 : coords.y2 * real_height / crop_height,
-            w : coords.w * real_width / crop_width,
-            h : coords.h * real_height / crop_height,
-            orientation : "across",
-            idx: idx
-          }
-        });
-        down_coords = down_coords.map(function (coords, idx) {
-          return {
-            x : coords.x * real_width / crop_width,
-            y : coords.y * real_height / crop_height,
-            x2 : coords.x2 * real_width / crop_width,
-            y2 : coords.y2 * real_height / crop_height,
-            w : coords.w * real_width / crop_width,
-            h : coords.h * real_height / crop_height,
-            orientation : "down",
-            idx: idx
-          }
-        });
-
-        // Extract subimages and then the text
-        var across_text_arr = Array(across_coords.length);
-        var down_text_arr = Array(down_coords.length);
-        async.each(
-          across_coords.concat(down_coords), 
-          function (coords, cb) {
-            var image_name = coords.orientation + "-" + coords.idx;
-            var extract_text = cp.exec(
-              "convert -extract " + coords.w + "x" + coords.h + "+" + coords.x + "+" + coords.y + " " + dir + "clean.jpg " + dir + image_name + ".jpg" +
-              " && tesseract " + dir + image_name  + ".jpg " + dir + image_name + " -l eng -psm 6" +
-              " && cat " + dir + image_name + ".txt ",
-              function (err, stdout, stderr) {
-                if (err) {
-                  cb(err);
-                  return;
-                }
-
-                if (coords.orientation == "across") {
-                  across_text_arr[coords.idx] = stdout;
-                } else {
-                  down_text_arr[coords.idx] = stdout;
-                }
-
-                cb(null);
-
-              });
-          },
-          function (err) {
+    // Build images
+    async.each(
+      across_coords.concat(down_coords),
+      function (coords, cb) {
+        var image_name = coords.orientation + "-" + coords.idx;
+        cp.exec(
+           "convert -extract " + coords.w + "x" + coords.h + "+" + coords.x + "+" + coords.y + " " + dir + "original.jpg " + dir + image_name + ".jpg",
+           function (err, stdout, stderr) {
             if (err) {
-              cb(err, null);
-            } else {
-              cb(null, {
-                across : across_text_arr.join("\n"),
-                down : down_text_arr.join("\n")
-              });
+              cb(err);
+              return;
             }
-          });
-      });
+            cb(null);
+           }
+        );
+      },
+      function (err) {
+        if (err) {
+          cb(err, null);
+          return;
+        }
+
+        cp.exec(
+          "convert " + dir + "across-*.jpg -append " + dir + "across.jpg &&" +
+          "convert " + dir + "down-*.jpg -append " + dir + "down.jpg &&" +
+          "convert -size 1x100 xc:white " + dir + "blank.jpg && " +
+          "convert " + dir + "across.jpg " + dir + "blank.jpg " + dir + "down.jpg -append " + dir + "clues.jpg",
+          function (err, stdout, stderr) {
+            if (err) return clean_up(puzzle, err);
+
+            // Try newocr
+            request.post({
+              url: 'http://api.newocr.com/v1/upload?key=' + process.env.NEWOCR_KEY,
+              formData: {
+                file: fs.createReadStream(dir + "clues.jpg")
+              }
+            }, function(err, response, body) {
+              if (err || response.statusCode != 200) {
+                cb(new Error("Bad OCR Response"), null);
+              } else {
+                var file_id = JSON.parse(body).data.file_id;
+                request.get('http://api.newocr.com/v1/ocr?key=' + process.env.NEWOCR_KEY + '&page=1&lang=eng&psm=6&file_id=' + file_id, 
+                  function(err, response, body) {
+                    cb(null, JSON.parse(body).data.text);
+                  });
+              }
+            });
+          }
+        );
+      }
+    );
   });
 }
 
-
-// TODO: assume clues are in order
-function get_clues(text, numbers) {
-  var clues = [];
-  var current_clue_num = -1;
-  var current_count = 0;
-  var current_clue = "";
-  
+function get_clues(text, across_numbers, down_numbers) {
+  var look_ahead = 5;
+  var across_clues = [], down_clues = [];
+  var current = {
+    num: -1,
+    lines: 0,
+    clue: "",
+    orientation: "across"
+  };
   var text_arr = text.split("\n").map(function (str) { return str.trim() });
   for (var i = 0; i < text_arr.length; i++) {
     var str = text_arr[i];
-    if (str == "") {
-      continue;
-    }
-    var split = split_clue(str);
-    var next_clue_num = split.nbr;
-    var new_str = split.str;
 
-    if (numbers.indexOf(next_clue_num) == -1) {
-      next_clue_num = -1;
-    }
-    if (next_clue_num > 0 || current_count >= 5) {
-      if (current_clue_num > 0) {
-        clues[current_clue_num] = current_clue;
+    // try across
+    var success = false;
+    for (var j = 0; j < look_ahead; j++) {
+      if (j >= across_numbers.length) break;
+      if (similar_to(across_numbers[j], str)) {
+        if (current.num > 0) {
+          if (current.orientation == "across") {
+            across_clues[current.num] = current.clue;
+          } else {
+            down_clues[current.num] = current.clue;
+          }
+        }
+        current = {
+          num: across_numbers[j],
+          lines: 1,
+          clue: extract_num(str, across_numbers[j]),
+          orientation: "across"
+        };
+        across_numbers.splice(j,1);
+        success = true;
+        break;
       }
-      current_clue = new_str;
-      current_count = 0;
-      current_clue_num = next_clue_num;
+    }
+
+    // if not, try down
+    if (!success) {
+      for (var j = 0; j < look_ahead; j++) {
+        if (j >= down_numbers.length) break;
+        if (similar_to(down_numbers[j], str)) {
+          if (current.num > 0) {
+            if (current.orientation == "across") {
+              across_clues[current.num] = current.clue;
+            } else {
+              down_clues[current.num] = current.clue;
+            }
+          }
+          current = {
+            num: down_numbers[j],
+            lines: 1,
+            clue: extract_num(str, down_numbers[j]),
+            orientation: "down"
+          };
+          down_numbers.splice(j,1);
+          success = true;
+          break;
+        }
+      }
+    }
+
+    if (success) {
+      look_ahead = 5;
     } else {
-      current_clue += " " + new_str;
-      current_count++;
+      if (look_ahead < 10) look_ahead++;
+      current.lines++;
+      current.clue += " " + str.trim();
+      if (current.lines >= 5 && current.num > 0) {
+        if (current.orientation == "across") {
+          across_clues[current.num] = current.clue;
+        } else {
+          down_clues[current.num] = current.clue;
+        }
+        current = {
+          num: -1,
+          lines: 0,
+          clue: "",
+          orientation: "across"
+        };
+      }
     }
   }
-  if (current_clue_num > 0) {
-    clues[current_clue_num] = current_clue;
-  }
-  return clues;
-}
-
-function split_clue(str) {
-  digits = str.substring(0, 3).split("").map(function (str) { return is_digit(str) });
-  if (digits[0] && digits[1] && digits[2]) {
-    return {
-      nbr: parseInt(str.substring(0, 3)),
-      str: str.substring(3, str.length).trim()
-    };
-  } else if (digits[0] && digits[1]) {
-    return {
-      nbr: parseInt(str.substring(0, 2)),
-      str: str.substring(2, str.length).trim()
-    };
-  } else if (digits[0]) {
-    return {
-      nbr: parseInt(str.substring(0, 1)),
-      str: str.substring(1, str.length).trim()
-    };
-  } else {
-    return {
-      nbr: -1,
-      str: str.trim()
-    };
+  if (current.num > 0) {
+    if (current.orientation == "across") {
+      across_clues[current.num] = current.clue;
+    } else {
+      down_clues[current.num] = current.clue;
+    }
   }
 
+  return {across: across_clues, down: down_clues};
 }
 
-function is_digit(str) {
-  var digits = Array("0", "1", "2", "3", "4", "5", "6", "7", "8", "9");
-  return digits.indexOf(str) >= 0;
+function extract_num(str, num) {
+  var len = num.toString().length;
+  var trim = str.trim();
+  return trim.substr(len, trim.length).trim();
+}
+
+function similar_to(num, str) {
+  var digits = num.toString().split('');
+  var chars = str.replace(/\W/g, '').toLowerCase().split('');
+  if (chars.length < digits.length) return false;
+  for (var i = 0; i < digits.length; i++) {
+    var c = chars[i];
+    if (c==digits[i]) continue;
+    switch (digits[i]) {
+      case '0':
+        if (c!='o') return false;
+        break;
+      case '1':
+        if (c!='i' && c!='[' && c!= ']' && c!= '|' && c!='l') return false;
+        break;
+      case '5':
+        if (c!='s') return false;
+        break;
+      case '9':
+        if (c!='g') return false;
+        break;
+      default:
+        return false;
+        break;
+    }
+  }
+  return true;
 }
 
 
@@ -304,7 +366,7 @@ function clean_up(puzzle, err) {
   console.log(err);
   puzzle.status = "failure";
   puzzle.save();
-  remove_folder(process.env.PZL_TMP + puzzle._id + '/', function(err) { console.log(err)});
+  //remove_folder(process.env.PZL_TMP + puzzle._id + '/', function(err) { console.log(err)});
   return;
 }
 

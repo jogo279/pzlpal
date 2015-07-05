@@ -45,7 +45,7 @@ function createController($scope, $http) {
         xhr.open("POST", "https://api.imgur.com/3/image.json");
         xhr.onload = function() {
             var url = JSON.parse(xhr.responseText).data.link;
-            $('#imgURL').val(url);
+            $scope.formData.imageURL = url;
             $('#upload-text').html("Upload Complete! <a href = '" + url + "' target='_blank'>See Image</a>");
         }
         xhr.onerror = function() {

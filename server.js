@@ -9,7 +9,6 @@ var methodOverride = require('method-override'); // simulate DELETE and PUT (exp
 
 // configuration =================
 mongoose.connect(process.env.MONGO_URL);     // connect to mongoDB database
-mongoose_clues.connect(process.env.CLUES_URL);
 app.use(express.static(__dirname + '/public'));                 // set the static files location /public/img will be /img for users
 app.use(morgan('dev'));                                         // log every request to the console
 app.use(bodyParser.urlencoded({'extended':'true'}));            // parse application/x-www-form-urlencoded

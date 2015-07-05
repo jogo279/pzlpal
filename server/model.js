@@ -27,7 +27,7 @@ var clueSchema = {
     answer : String,
     length : Number
 }
-
+var Clue = mongoose.model('Clue', clueSchema);
 
 module.exports.Puzzle = Puzzle;
 module.exports.Clue = Clue;
