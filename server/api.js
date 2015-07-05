@@ -34,7 +34,6 @@ module.exports.update_puzzle = function(req, res) {
         if (err) {
             res.status(400).json({error: err.message});
         } else {
-            console.log(req.body);
             puzzle.gridWidth = req.body.gridWidth;
             puzzle.gridHeight = req.body.gridHeight;
             puzzle.status = "digitizing"

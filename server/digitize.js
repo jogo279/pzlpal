@@ -14,108 +14,131 @@ module.exports.digitize = function(id, crop_width, crop_height, across_coords, d
     // Set up workspace
     var dir = process.env.PZL_TMP + id + '/';
     fs.mkdir(dir, function(err) {
-      if (err && err.code != 'EEXIST') {
-        return clean_up(puzzle, err);
-      } 
+      if (err && err.code != 'EEXIST') return clean_up(puzzle, err);
 
       // Download the image
-      download(puzzle.imageURL, dir + 'original.jpg', function() {
-        // Identify the grid
-        var find_grid = cp.exec(
-          "python server/find_grid.py " + dir + "original.jpg " + puzzle.gridWidth + " " + puzzle.gridHeight + " 0",
-          function (err, stdout, stderr) {
+      download(puzzle.imageURL, dir + 'original.jpg', function(err) {
+        if (err) return clean_up(puzzle, err);
+
+        // Find slots
+        get_slots(dir + 'original.jpg', puzzle.gridWidth, puzzle.gridHeight, function(err, slots, across_slot_nums, down_slot_nums) {
+          if (err) return clean_up(puzzle, err);
+
+          // Build clues image
+          build_clues_image(puzzle._id, across_coords, down_coords, crop_width, crop_height, function(err, text) {
             if (err) return clean_up(puzzle, err);
-            var grid = stdout.split("\n").map(function(row) {
-              return row.split(" ")
-                .filter(function (str) {return str != ""})
-                .map(function (str) { return + str });
-            }).filter(function (arr) { return arr.length == puzzle.gridWidth });
-            
-            if (grid.length != puzzle.gridHeight) {
-              // TODO: why not just throw the error?
-              return clean_up(puzzle, new Error("find_grid output doesn't match grid height"));
-            }
 
-            // Build slots
-            var slot_num = 1;
-            var slots = [];
-            var across_slot_nums = [];
-            var down_slot_nums = [];
-            for (var i = 0; i < grid.length; i++) {
-              for (var j = 0; j < grid[i].length; j++) {
-                var new_slot = false;
-
-                // Is this the start of a new across?
-                if (grid[i][j] == 1 && (j==0 || grid[i][j-1]==0) && (j != grid[i].length-1 && grid[i][j+1]==1)) {
-                  // Find slot length
-                  var crawl = j;
-                  while (crawl < grid[i].length && grid[i][crawl] == 1) crawl++;
-                  var length = crawl-j;
-                  slots.push({
-                    starty : i+1,
-                    startx : j+1,
-                    len : length,
-                    orientation : "across",
-                    position : slot_num
-                  });
-                  new_slot = true;
-                  across_slot_nums.push(slot_num);
-                }
-
-                // Is this the start of a new down?
-                if (grid[i][j] == 1 && (i==0 || grid[i-1][j]==0) && (i != grid.length-1 && grid[i+1][j]==1)) {
-                  // Find slot length
-                  var crawl = i;
-                  while (crawl < grid.length && grid[crawl][j] == 1) crawl++;
-                  var length = crawl-i;
-                  slots.push({
-                    starty : i+1,
-                    startx : j+1,
-                    len : length,
-                    orientation : "down",
-                    position : slot_num
-                  });
-                  new_slot = true;
-                  down_slot_nums.push(slot_num);
-                }
-
-                if (new_slot) slot_num++;
-              }
-            }
-            get_text(puzzle._id, across_coords, down_coords, crop_width, crop_height, function(err, text) {
+            // Get text from image
+            get_text(puzzle._id, function(err, text) {
               if (err) return clean_up(puzzle, err);
+              console.log(text);
 
               // Split up text into clues
-              var clues = get_clues(text, across_slot_nums, down_slot_nums);
-              var across_clues = clues.across;
-              var down_clues = clues.down;
+              get_clues(text, across_slot_nums, down_slot_nums, function (err, across_clues, down_clues) {
+                if (err) return clean_up(puzzle, err);
 
-              // Add clues to slots and save
-              slots.forEach(function(slot) {
-                if (slot.orientation == "across") {
-                  slot.clue = across_clues[slot.position];
-                } else {
-                  slot.clue = down_clues[slot.position];
-                }
+                // Add clues to slots and save
+                slots.forEach(function(slot) {
+                  if (slot.orientation == "across") {
+                    slot.clue = across_clues[slot.position];
+                  } else {
+                    slot.clue = down_clues[slot.position];
+                  }
+                });
+                Puzzle.update({_id: id}, {'$set': {
+                  'status': 'success',
+                  'slots': slots
+                }}, function(err) {
+                  if (err) {
+                    console.log(err.stack);
+                  } else {
+                    console.log("Success");
+                  }
+                });
               });
-              Puzzle.update({_id: id}, {'$set': {
-                'status': 'success',
-                'slots': slots
-              }}, function(err) {
-                if (err) {
-                  console.log(err.stack);
-                } else {
-                  console.log("Success");
-                }
-              });
-            });
+            });            
+          });            
         });
       });
     });
   });
 }
 
-function get_text(id, across_coords, down_coords, crop_width, crop_height, cb) {
+
+
+/* Given an image, uses find_grid.py to find the puzzle grid in the image, then determines all of the slots by
+ * assuming standard crossword numbering. */
+function get_slots(file, width, height, cb) {
+  cp.exec(
+    "python server/find_grid.py " + file + " " + width + " " + height,
+    function (err, stdout, stderr) {
+      if (err) {
+        cb(err, null, null, null);
+        return;
+      }
+      var grid = stdout.split("\n").map(function(row) {
+        return row.split(" ")
+          .filter(function (str) {return str != ""})
+          .map(function (str) { return + str });
+      }).filter(function (arr) { return arr.length == width });
+            
+      if (grid.length != height) {
+        cb(new Error("find_grid output doesn't match grid height"), null, null, null);
+      }
+
+      // Build slots
+      var slot_num = 1;
+      var slots = [];
+      var across_slot_nums = [];
+      var down_slot_nums = [];
+      for (var i = 0; i < grid.length; i++) {
+        for (var j = 0; j < grid[i].length; j++) {
+          var new_slot = false;
+
+          // Is this the start of a new across?
+          if (grid[i][j] == 1 && (j==0 || grid[i][j-1]==0) && (j != grid[i].length-1 && grid[i][j+1]==1)) {
+            // Find slot length
+            var crawl = j;
+            while (crawl < grid[i].length && grid[i][crawl] == 1) crawl++;
+            var length = crawl-j;
+            slots.push({
+              starty : i+1,
+              startx : j+1,
+              len : length,
+              orientation : "across",
+              position : slot_num
+            });
+            new_slot = true;
+            across_slot_nums.push(slot_num);
+          }
+
+          // Is this the start of a new down?
+          if (grid[i][j] == 1 && (i==0 || grid[i-1][j]==0) && (i != grid.length-1 && grid[i+1][j]==1)) {
+            // Find slot length
+            var crawl = i;
+            while (crawl < grid.length && grid[crawl][j] == 1) crawl++;
+            var length = crawl-i;
+            slots.push({
+              starty : i+1,
+              startx : j+1,
+              len : length,
+              orientation : "down",
+              position : slot_num
+            });
+            new_slot = true;
+            down_slot_nums.push(slot_num);
+          }
+
+          if (new_slot) slot_num++;
+        }
+      }
+      cb(null, slots, across_slot_nums, down_slot_nums);
+    });
+}
+
+
+/* Given crop data from user, construct a single image containing only the clues via ImageMagick */
+function build_clues_image(id, across_coords, down_coords, crop_width, crop_height, cb) {
   // limit to 10 images each
   across_coords = across_coords.slice(0, 10);
   down_coords = down_coords.slice(0, 10);
@@ -150,7 +173,7 @@ function get_text(id, across_coords, down_coords, crop_width, crop_height, cb) {
       }
     });
 
-    // Build images
+    // Build image for each piece
     async.each(
       across_coords.concat(down_coords),
       function (coords, cb) {
@@ -168,35 +191,17 @@ function get_text(id, across_coords, down_coords, crop_width, crop_height, cb) {
       },
       function (err) {
         if (err) {
-          cb(err, null);
+          cb(err);
           return;
         }
 
+        // Combine the images
         cp.exec(
           "convert " + dir + "across-*.jpg -append " + dir + "across.jpg &&" +
           "convert " + dir + "down-*.jpg -append " + dir + "down.jpg &&" +
-          "convert -size 1x100 xc:white " + dir + "blank.jpg && " +
-          "convert " + dir + "across.jpg " + dir + "blank.jpg " + dir + "down.jpg -append " + dir + "clues.jpg",
+          "convert " + dir + "across.jpg " + dir + "down.jpg -append " + dir + "clues.jpg",
           function (err, stdout, stderr) {
-            if (err) return clean_up(puzzle, err);
-
-            // Try newocr
-            request.post({
-              url: 'http://api.newocr.com/v1/upload?key=' + process.env.NEWOCR_KEY,
-              formData: {
-                file: fs.createReadStream(dir + "clues.jpg")
-              }
-            }, function(err, response, body) {
-              if (err || response.statusCode != 200) {
-                cb(new Error("Bad OCR Response"), null);
-              } else {
-                var file_id = JSON.parse(body).data.file_id;
-                request.get('http://api.newocr.com/v1/ocr?key=' + process.env.NEWOCR_KEY + '&page=1&lang=eng&psm=6&file_id=' + file_id, 
-                  function(err, response, body) {
-                    cb(null, JSON.parse(body).data.text);
-                  });
-              }
-            });
+            cb(err);
           }
         );
       }
@@ -204,7 +209,39 @@ function get_text(id, across_coords, down_coords, crop_width, crop_height, cb) {
   });
 }
 
-function get_clues(text, across_numbers, down_numbers) {
+/* Extract text from an image. First tries NewOCR, and then tesseract if that fails. */
+function get_text(id,  cb) {
+  var dir = process.env.PZL_TMP + id + '/';
+  request.post({
+    url: 'http://api.newocr.com/v1/upload?key=' + process.env.NEWOCR_KEY,
+    formData: {
+      file: fs.createReadStream(dir + "clues.jpg")
+    }
+  }, function(err, response, body) {
+    if (err || response.statusCode != 200) {
+      console.log("NewOCR Failed on " + file + ". Trying Tesseract.");
+      cp.exec(
+        "tesseract " + dir + " clues.jpg " + dir + "clues -l eng -psm 6 && cat " + dir + "clues.txt",
+        function(err, stdout, stderr) {
+          if (err) {
+            cb(new Error("Bad OCR Response"), null);
+          } else {
+            cb (null, stdout);
+          }
+        }
+      );
+    } else {
+      var file_id = JSON.parse(body).data.file_id;
+      request.get('http://api.newocr.com/v1/ocr?key=' + process.env.NEWOCR_KEY + '&page=1&lang=eng&psm=6&file_id=' + file_id, 
+        function(err, response, body) {
+          cb(null, JSON.parse(body).data.text);
+        });
+    }
+  });
+}
+
+/* Divides up text into clues by parsing the numbers in the text. */
+function get_clues(text, across_numbers, down_numbers, cb) {
   var look_ahead = 5;
   var across_clues = [], down_clues = [];
   var current = {
@@ -295,31 +332,33 @@ function get_clues(text, across_numbers, down_numbers) {
     }
   }
 
-  return {across: across_clues, down: down_clues};
+  cb(null, across_clues, down_clues);
 }
 
+/* Remove number from beginning of string */
 function extract_num(str, num) {
   var len = num.toString().length;
   var trim = str.trim();
   return trim.substr(len, trim.length).trim();
 }
 
+/* Check if string starts with something like the number. */
 function similar_to(num, str) {
   var digits = num.toString().split('');
-  var chars = str.replace(/\W/g, '').toLowerCase().split('');
+  var chars = str.replace(/\W/g, '').split('');
   if (chars.length < digits.length) return false;
   for (var i = 0; i < digits.length; i++) {
     var c = chars[i];
     if (c==digits[i]) continue;
     switch (digits[i]) {
       case '0':
-        if (c!='o') return false;
+        if (c!='o' && c!='O') return false;
         break;
       case '1':
-        if (c!='i' && c!='[' && c!= ']' && c!= '|' && c!='l') return false;
+        if (c!='I' && c!='[' && c!= ']' && c!= '|' && c!='l') return false;
         break;
       case '5':
-        if (c!='s') return false;
+        if (c!='s' && c!='S') return false;
         break;
       case '9':
         if (c!='g') return false;
@@ -331,7 +370,6 @@ function similar_to(num, str) {
   }
   return true;
 }
-
 
 /* http://stackoverflow.com/questions/18052762/remove-directory-which-is-not-empty */
 function remove_folder(location, next) {
@@ -370,14 +408,12 @@ function clean_up(puzzle, err) {
   return;
 }
 
-function download(uri, filename, callback){
+function download(uri, filename, cb){
   request.head(uri, function(err, res, body){
-    console.log('content-type:', res.headers['content-type']);
-    console.log('content-length:', res.headers['content-length']);
     if (res.headers['content-length'] > 20000000) {
-      throw new Error("File over 20MB.");
+      cb(new Error("File over 20MB."));
+    } else {
+      request(uri).pipe(fs.createWriteStream(filename)).on('close', cb);
     }
-
-    request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
   });
 };
