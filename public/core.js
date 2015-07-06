@@ -7,6 +7,10 @@ pzlPal.config(function($routeProvider) {
             templateUrl : 'pages/create.html',
             controller : 'createController'
         })
+        .when('/about', {
+            templateUrl : 'pages/about.html',
+            controller : 'createController'
+        })
         .when('/:puzzle_id/crop', {
             templateUrl : 'pages/crop.html',
             controller : 'cropController'
@@ -22,6 +26,15 @@ function createController($scope, $http) {
 
     // when submitting the add form, send the text to the node API
     $scope.createPuzzle = function() {
+        if ($scope.formData.pzlName.length <= 0 || $scope.formData.pzlName.length > 100) {
+            $('#errors').text("Invalid puzzle name.");
+            return;
+        }
+        if ($scope.formData.imageURL.length <= 0 || $scope.formData.imageURL.length > 200) {
+            $('#errors').text("Invalid puzzle image.");
+            return;
+        }
+
         $http.post('/api/puzzles', $scope.formData)
             .success(function(puzzle) {
                 window.location.hash = "#/" + puzzle._id + "/crop"
@@ -34,6 +47,9 @@ function createController($scope, $http) {
     // uploading file to imgur - https://github.com/paulrouget/miniuploader
     $scope.upload = function(file) {
         $('#upload-text').text("Uploading...");
+        $('#submitBtn').prop("disabled", true);
+        $('#uploadBtn').prop("disabled", true);
+        $('#errors').text("");
          /* Is the file an image? */
         if (!file || !file.type.match(/image.*/)) return;
         document.body.className = "uploading";
@@ -46,10 +62,15 @@ function createController($scope, $http) {
         xhr.onload = function() {
             var url = JSON.parse(xhr.responseText).data.link;
             $scope.formData.imageURL = url;
+            $('#imageURL').val(url);
             $('#upload-text').html("Upload Complete! <a href = '" + url + "' target='_blank'>See Image</a>");
+            $('#submitBtn').prop("disabled", false);
+            $('#uploadBtn').prop("disabled", false);
         }
         xhr.onerror = function() {
             $('#upload-text').html("Upload Failed. Please try uploading to <a href = 'http://imgur.com' target='_blank'>Imgur.com</a> and pasting the link.</a>" );
+            $('#submitBtn').prop("disabled", false);
+            $('#uploadBtn').prop("disabled", false);
         }
         
         xhr.setRequestHeader('Authorization', 'Client-ID 1f3bd725719b78b'); // Get your own key http://api.imgur.com/
@@ -70,152 +91,6 @@ function puzzleController($scope, $http, $routeParams) {
             slots.forEach(function(slot) {
                 slot.answer = new Array(slot.len + 1).join('x');
             });
-            var puzzleData = [
-                {
-                    clue: "First letter of greek alphabet",
-                    answer: "alpha",
-                    position: 1,
-                    orientation: "across",
-                    startx: 1,
-                    starty: 1
-                },
-                {
-                    clue: "Not a one ___ motor, but a three ___ motor",
-                    answer: "phase",
-                    position: 3,
-                    orientation: "across",
-                    startx: 7,
-                    starty: 1
-                },
-                {
-                    clue: "Created from a separation of charge",
-                    answer: "capacitance",
-                    position: 5,
-                    orientation: "across",
-                    startx: 1,
-                    starty: 3
-                },
-                {
-                    clue: "The speeds of engines without and accelaration",
-                    answer: "idlespeeds",
-                    position: 8,
-                    orientation: "across",
-                    startx: 1,
-                    starty: 5
-                },
-                {
-                    clue: "Complex resistances",
-                    answer: "impedances",
-                    position: 10,
-                    orientation: "across",  
-                    startx: 2,
-                    starty: 7
-                },
-                {
-                    clue: "This device is used to step-up, step-down, and/or isolate",
-                    answer: "transformer",
-                    position: 13,
-                    orientation: "across",
-                    startx: 1,
-                    starty: 9
-                },
-                {
-                    clue: "Type of ray emitted frm the sun",
-                    answer: "gamma",
-                    position: 16,
-                    orientation: "across",
-                    startx: 1,
-                    starty: 11
-                },
-                {
-                    clue: "C programming language operator",
-                    answer: "cysan",
-                    position: 17,
-                    orientation: "across",
-                    startx: 7,
-                    starty: 11
-                },
-                {
-                    clue: "Defines the alpha-numeric characters that are typically associated with text used in programming",
-                    answer: "ascii",
-                    position: 1,
-                    orientation: "down",
-                    startx: 1,
-                    starty: 1
-                },
-                {
-                    clue: "Generally, if you go over 1kV per cm this happens",
-                    answer: "arc",
-                    position: 2,
-                    orientation: "down",
-                    startx: 5,
-                    starty: 1
-                },
-                {
-                    clue: "Control system strategy that tries to replicate the human through process (abbr.)",
-                    answer: "ann",
-                    position: 4,
-                    orientation: "down",
-                    startx: 9,
-                    starty: 1
-                },
-                {
-                    clue: "Greek variable that usually describes rotor positon",
-                    answer: "theta",
-                    position: 6,
-                    orientation: "down",
-                    startx: 7,
-                    starty: 3
-                },
-                {
-                    clue: "Electromagnetic (abbr.)",
-                    answer: "em",
-                    position: 7,
-                    orientation: "down",
-                    startx: 11,
-                    starty: 3
-                },
-                {
-                    clue: "No. 13 across does this to a voltage",
-                    answer: "steps",
-                    position: 9,
-                    orientation: "down",
-                    startx: 5,
-                    starty: 5
-                },
-                {
-                    clue: "Emits a lout wailing sound",
-                    answer: "siren",
-                    position: 11,
-                    orientation: "down",
-                    startx: 11,
-                    starty: 7
-                },
-                {
-                    clue: "Information technology (abbr.)",
-                    answer: "it",
-                    position: 12,
-                    orientation: "down",
-                    startx: 1,
-                    starty: 8
-                },
-                {
-                    clue: "Asynchronous transfer mode (abbr.)",
-                    answer: "atm",
-                    position: 14,
-                    orientation: "down",
-                    startx: 3,
-                    starty: 9
-                },
-                {
-                    clue: "Offset current control (abbr.)",
-                    answer: "occ",
-                    position: 15,
-                    orientation: "down",
-                    startx: 7,
-                    starty: 9
-                }
-            ];
             $('#puzzle-wrapper').crossword(slots);
         })
         .error(function(data) {
@@ -273,14 +148,17 @@ function cropController($scope, $http, $routeParams) {
     }
 
     $scope.showPreview = function(coords) {
+        $('#preview').css("visibility", "visible");
         $scope.scaleImage(coords, "preview");
         $scope.formData.preview_coords = coords;
     }
 
     $scope.addAcross = function() {
-        $scope.formData.across_coords.push($scope.formData.preview_coords);
-        $('#across-container').append("<div style='overflow:hidden;float:left;margin:5px' id = 'across-" + $scope.formData.across_coords.length + "'><img src='" + $scope.puzzle.imageURL + "'></div>");
-        $scope.scaleImage($scope.formData.preview_coords, "across-" + $scope.formData.across_coords.length);
+        if ($scope.formData.preview_coords.w > 5 && $scope.formData.preview_coords.h > 5) {
+            $scope.formData.across_coords.push($scope.formData.preview_coords);
+            $('#across-container').append("<div style='overflow:hidden;float:left;margin:5px' id = 'across-" + $scope.formData.across_coords.length + "'><img src='" + $scope.puzzle.imageURL + "'></div>");
+            $scope.scaleImage($scope.formData.preview_coords, "across-" + $scope.formData.across_coords.length);
+        }
     }
 
     $scope.clearAcross = function() {
@@ -289,9 +167,11 @@ function cropController($scope, $http, $routeParams) {
     }
 
     $scope.addDown = function() {
-        $scope.formData.down_coords.push($scope.formData.preview_coords);
-        $('#down-container').append("<div style='overflow:hidden;float:left;margin:5px' id = 'down-" + $scope.formData.down_coords.length + "'><img src='" + $scope.puzzle.imageURL + "'></div>");
-        $scope.scaleImage($scope.formData.preview_coords, "down-" + $scope.formData.down_coords.length);
+        if ($scope.formData.preview_coords.w > 5 && $scope.formData.preview_coords.h > 5) {
+            $scope.formData.down_coords.push($scope.formData.preview_coords);
+            $('#down-container').append("<div style='overflow:hidden;float:left;margin:5px' id = 'down-" + $scope.formData.down_coords.length + "'><img src='" + $scope.puzzle.imageURL + "'></div>");
+            $scope.scaleImage($scope.formData.preview_coords, "down-" + $scope.formData.down_coords.length);
+        }
     }
 
     $scope.clearDown = function() {
@@ -352,14 +232,14 @@ function cropController($scope, $http, $routeParams) {
     }
 
     $scope.pollPuzzle = function(id, count) {
-        if (count > 10) {
+        if (count > 20) {
             $scope.loadingFailure("We were unable to handle your request quickly enough. Please try again in a moment.");
             return;
         }
         $http.get('/api/puzzles/'+id)
             .success(function(puzzle) {
                 if (puzzle.status == "digitizing") {
-                    setTimeout(function() { $scope.pollPuzzle(id, ++count) }, 2000);
+                    setTimeout(function() { $scope.pollPuzzle(id, ++count) }, 3000);
                 } else if (puzzle.status == "failure") {
                     $scope.loadingFailure("We were unable to digitize your puzzle. Please ensure that the image URL you've entered is valid.")
                 } else if (puzzle.status == "success") {

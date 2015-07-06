@@ -16,13 +16,13 @@
           </div>
         </div>    
         <div class="form-group">
-          <label for="imgURL" class="col-lg-3 control-label">Crossword Picture URL</label>
+          <label for="imageURL" class="col-lg-3 control-label">Crossword Picture URL</label>
           <div class="col-lg-6">
             <div class="input-group">
               <span class="input-group-btn">
-                <button class="btn btn-primary" type="button" onclick="$('#file-input').click()">Browse...</button>
+                <button id="uploadBtn" class="btn btn-primary" type="button" onclick="$('#file-input').click()">Browse...</button>
               </span>
-              <input type="text" class="form-control" name="imgURL" id="imgURL" placeholder="http://s28.postimg.org/rulmey7wc/file_page1.jpg" ng-model="formData.imageURL">
+              <input type="text" class="form-control" name="imageURL" id="imageURL" placeholder="http://s28.postimg.org/rulmey7wc/file_page1.jpg" ng-model="formData.imageURL">
             </div>
             <input style="visibility: collapse; width: 0px;" type="file" onchange="angular.element(this).scope().upload(this.files[0])" id="file-input">
             <p id="upload-text" class="pull-left">

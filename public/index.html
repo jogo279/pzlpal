@@ -8,7 +8,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Optimize mobile viewport -->
 
-    <title>Crossword Puzzle Digitizer and Solver - PzlPal</title>
+    <title>PzlPal - Crossword Puzzle Digitizer and Solver</title>
 
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
 
@@ -34,17 +34,31 @@
 </head>
 <!-- SET THE CONTROLLER AND GET ALL TODOS -->
 <body>
-        <div class="navbar navbar-inverse navbar-static-top" role="navigation">
-            <div class="container-fluid">
-                <div class="navbar-header">
-                    <a class="navbar-brand" href="/">PZLPal</a>
-                </div>
-            </div>
+        <nav class="navbar navbar-inverse navbar-static-top">
+      <div class="container">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="#">PzlPal - Crossword Puzzle Digitizer and Solver</a>
         </div>
+        <div id="navbar">
+          <ul class="nav navbar-nav navbar-right">
+            <li><a href="#">Home</a></li>
+            <li><a href="#/about">About</a></li>
+            <li><a href="http://github.com/jogo279/pzlpal" target="_blank">Github</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
 
     <div class="container-fluid" style="padding:25px">
       <div ng-view></div>
     </div>
+
+    <footer class="footer">
+      <div class="container">
+        <hr>
+        <p class="text-muted">&copy; <script>document.write(new Date().getFullYear())</script> Jonathan Goldman, Harsh Pandey, Siddharth Dhulipalla</p>
+      </div>
+    </footer>
 
 </body>
 </html>

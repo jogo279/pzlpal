@@ -40,8 +40,14 @@ module.exports.digitize = function(id, crop_width, crop_height, across_coords, d
                 slots.forEach(function(slot) {
                   if (slot.orientation == "across") {
                     slot.clue = across_clues[slot.position];
+                    if (slot.clue == null) {
+                      slot.clue = "";
+                    }
                   } else {
                     slot.clue = down_clues[slot.position];
+                    if (slot.clue == null) {
+                      slot.clue = "";
+                    }
                   }
                 });
                 Puzzle.update({_id: id}, {'$set': {
@@ -244,7 +250,6 @@ function get_clues(text, across_numbers, down_numbers, cb) {
   var look_ahead = 5, allow_across = true, allow_down = false;
   var across_cutoff = across_numbers[Math.floor(across_numbers.length*.8)];
   var down_cutoff = down_numbers[Math.floor(down_numbers.length*.3)];
-  console.log("ACROSS: " + across_cutoff + " DOWN: " + down_cutoff);
   var across_clues = [], down_clues = [];
   var current = {
     num: -1,
