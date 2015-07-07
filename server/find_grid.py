@@ -13,8 +13,6 @@ height_squares = int(sys.argv[3]) # third parameter is the number of squares tal
 img = cv2.imread(img_path)    
 gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)    
 ret, thresh = cv2.threshold(gray,127,255,cv2.THRESH_BINARY_INV)
-thresh2 = cv2.bitwise_not(thresh)
-
 contours,hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, 1)
 
 max_area = -1
@@ -30,7 +28,7 @@ for cnt in contours:
 
 # cut the crossword region, and resize it to a standard size of 130x130
 x,y,w,h = cv2.boundingRect(max_cnt)
-cross_rect = thresh2[y:y+h, x:x+w]
+cross_rect = thresh[y:y+h, x:x+w]
 cross_rect = cv2.resize(cross_rect,(width_squares*10,height_squares*10))
 
 cross = np.zeros((width_squares,height_squares))
@@ -39,7 +37,7 @@ cross = np.zeros((width_squares,height_squares))
 for i in xrange(width_squares):
     for j in xrange(height_squares):
         box = cross_rect[i*10:(i+1)*10, j*10:(j+1)*10]
-        if cv2.countNonZero(box) > 50:
+        if cv2.countNonZero(box) <= 50:
             cross.itemset((i,j),1)
 
 print('\n'.join([''.join(['{:4}'.format(item.astype(np.int64)) for item in row]) 

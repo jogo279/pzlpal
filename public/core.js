@@ -117,7 +117,7 @@ function cropController($scope, $http, $routeParams) {
             onChange: $scope.showPreview,
             onSelect: $scope.showPreview
         });
-        $scope.formData.preview_coords = {w : 200, h : 200, x : 0, y : 0, x2 : 200, y2 : 200 };
+        $scope.formData.preview_coords = {w : 0, h : 0, x : 0, y : 0, x2 : 0, y2 : 0 };
         $scope.formData.across_coords = [];
         $scope.formData.down_coords = [];
 

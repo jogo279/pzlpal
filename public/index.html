@@ -34,7 +34,7 @@
 </head>
 <!-- SET THE CONTROLLER AND GET ALL TODOS -->
 <body>
-        <nav class="navbar navbar-inverse navbar-static-top">
+    <nav class="navbar navbar-inverse navbar-static-top">
       <div class="container">
         <div class="navbar-header">
           <a class="navbar-brand" href="#">PzlPal - Crossword Puzzle Digitizer and Solver</a>
@@ -49,11 +49,13 @@
       </div>
     </nav>
 
-    <div class="container-fluid" style="padding:25px">
-      <div ng-view></div>
+    <div>
+      <div class="container-fluid" style="padding:25px">
+        <div ng-view></div>
+      </div>
     </div>
 
-    <footer class="footer">
+    <footer class="footer" style="clear:both">
       <div class="container">
         <hr>
         <p class="text-muted">&copy; <script>document.write(new Date().getFullYear())</script> Jonathan Goldman, Harsh Pandey, Siddharth Dhulipalla</p>
