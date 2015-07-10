@@ -31,6 +31,9 @@ app.get('/api/puzzles/:id', api.retrieve_puzzle);
 // update puzzle and get crop data
 app.post('/api/puzzles/:id', api.update_puzzle);
 
+// find possible answers
+app.get('/api/puzzles/answers/:id', api.get_possible_answers);
+
 // application 
 app.get('/', function (req, res) { 
     res.sendfile('public/index.html'); 

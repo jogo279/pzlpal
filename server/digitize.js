@@ -51,7 +51,7 @@ module.exports.digitize = function(id, crop_width, crop_height, across_coords, d
                   }
                 });
                 Puzzle.update({_id: id}, {'$set': {
-                  'status': 'success',
+                  'digitizing_status': 'success',
                   'slots': slots
                 }}, function(err) {
                   if (err) {
@@ -415,7 +415,7 @@ function remove_folder(location, next) {
 
 function clean_up(puzzle, err) {
   console.log(err);
-  puzzle.status = "failure";
+  puzzle.digitizing_status = "failure";
   puzzle.save();
   //remove_folder(process.env.PZL_TMP + puzzle._id + '/', function(err) { console.log(err)});
   return;

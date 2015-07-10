@@ -80,8 +80,9 @@ function createController($scope, $http) {
 
 }
 
-function puzzleController($scope, $http, $routeParams) {
-
+function puzzleController($scope, $http, $routeParams, $timeout) {
+    $scope.puzzle = null;
+    $scope.board = [];
 
     $scope.loadPuzzle = function() {
         $http.get('api/puzzles/' + $routeParams.puzzle_id)
@@ -89,16 +90,407 @@ function puzzleController($scope, $http, $routeParams) {
             $scope.puzzle = puzzle;
             var slots = puzzle.slots;
             slots.forEach(function(slot) {
-                slot.answer = new Array(slot.len + 1).join('x');
+                slot.answer = new Array(slot.len + 1).join(' ');
             });
             $('#puzzle-wrapper').crossword(slots);
         })
         .error(function(data) {
             console.log(data);
         });
-        
     }
 
+    $scope.retrieveAnswers = function() {
+        $http.get('/api/puzzles/answers/' + $routeParams.puzzle_id)
+        .success(function() {
+            $scope.beginLoading();
+            $scope.pollPuzzle(0);
+        })
+        .error(function(data) {
+            console.log(data);
+        });
+    }
+
+    $scope.pollPuzzle = function(count) {
+        var id = $routeParams.puzzle_id;
+        if (count > 20) {
+            $scope.loadingFailure("We were unable to handle your request quickly enough. Please try again in a moment.");
+            return;
+        }
+        $http.get('/api/puzzles/'+id)
+            .success(function(puzzle) {
+                if (puzzle.answers_status == "retrieving") {
+                    setTimeout(function() { $scope.pollPuzzle(++count) }, 1000);
+                } else if (puzzle.answers_status == "failure") {
+                    $scope.loadingFailure("We were unable to find possible answers.")
+                } else if (puzzle.answers_status == "success") {
+                    $scope.loadingSuccess(puzzle);
+                }
+            })
+            .error(function(data) {
+                $scope.loadingFailure("Puzzle not found.");
+            });
+    };
+
+    $scope.beginLoading = function() {
+        $('#submitBtn').attr("disabled", "disabled");
+        $('#submitBtn').text("Searching for possible answers...");
+        $('#loadingDiv').css("display", "block");
+        $('#errors').text("");
+    };
+
+    $scope.loadingSuccess = function(puzzle) {
+       $scope.puzzle = puzzle;
+       $('#solveForm').css("display", "none");
+       $scope.solve2();
+    };
+
+    $scope.loadingFailure = function(error) {
+        $('#submitBtn').removeAttr("disabled");
+        $('#submitBtn').text("Solve Puzzle");
+        $('#loadingDiv').css("display", "none");
+        $('#errors').text(error);
+    }
+
+    $scope.solve2 = function() {
+        var slots = $scope.puzzle.slots;
+        slots.forEach(function(slot) {
+            slot.answer = new Array(slot.len + 1).join(' ');
+            slot.locked = false;
+        });
+        // 0 index
+        for (var i = 0; i < slots.length; i++) {
+            slots[i].startx--;
+            slots[i].starty--;
+        }
+
+        // TODO: reverse indexing
+        var board = new Array($scope.puzzle.gridHeight);
+        for(var i = 0; i < $scope.puzzle.gridHeight; i++) {
+            board[i] = new Array($scope.puzzle.gridWidth);
+            for (var j = 0; j < $scope.puzzle.gridWidth; j++) {
+                board[i][j] = ' ';
+            }
+        }
+
+        var maxSlotsCount = 0;
+        var maxSlots = clone(slots);
+        var maxBoard = clone(board);
+
+        var startTime = new Date().getTime();
+
+        function updateBest(board) {
+            var fullSlotsCount = 0;
+            for (var i = 0; i < slots.length; i++)
+                if (slots[i].answer.replace(/\s+/g, '') !== '' && slots[i].answer !== '*')
+                    fullSlotsCount++;
+
+            if (fullSlotsCount > maxSlotsCount) {
+                startTime = new Date().getTime();
+                maxSlotsCount = fullSlotsCount;
+                maxSlots = clone(slots);
+                maxBoard = clone(board);
+                updateUI(board);
+            }
+        }
+
+        function lockSlots(cb) {
+            var done = true;
+            var pending = 0;
+            for (var i = 0; i < maxSlots.length; i++) {
+                if (maxSlots[i].answer.replace(/\s+/g, '')) {
+                    maxSlots[i].locked = true;
+                }
+                if (!maxSlots[i].locked) pending++;
+            }
+
+            slots = maxSlots;
+            startTime = new Date().getTime();
+            console.log("Pending: " + pending);
+            if (pending > 0) solve(maxBoard, cb, 1);
+            else cb(true);
+        }
+
+        function updateUI(board) {
+            for(var i = 0; i < $scope.puzzle.gridHeight; i++) {
+                for (var j = 0; j < $scope.puzzle.gridWidth; j++) {
+                    $('td[data-coords="'+(i+1)+','+(j+1)+'"] input').val(board[j][i]);
+                }
+            }
+        }
+
+        function clone (obj) {
+            return JSON.parse(JSON.stringify(obj));
+        }
+
+        function getSlotIndex (board) {
+            var maxCollisions = -100000000;
+            var mcSlotIndex = -1;
+
+            for (var i = 0; i < slots.length; i++) {
+                var slot = slots[i];
+                if (slot.answer.replace(/\s+/g, '').length !== 0) {
+                    continue;
+                }
+                if(slot.locked) {
+                    continue;
+                }
+
+                var collisions = 0;
+                var num5Star = 0;
+                for (var j = 0; j < slot.len; j++) {
+                    var curX = slot.startx;
+                    var curY = slot.starty;
+                    if (slot.orientation == "across")
+                        curX += j;
+                    else
+                    curY += j;
+
+                    var curC = board[curY][curX];
+                    if (curC !== ' ') collisions++;
+                }
+
+                // Check number of 5 star answer choices and pick clue with lowest one
+                for (var j = 0; j < slot.guesses.length; j++) {
+                    if (slot.guesses[j].conf > 20) {
+                        num5Star++;
+                    }
+                }
+
+                if (num5Star) {
+                    collisions =  (collisions * 50) - num5Star;
+                }
+
+
+                if (collisions > maxCollisions) {
+                    maxCollisions = collisions;
+                    mcSlotIndex = i;
+                }
+            }
+            return mcSlotIndex;
+        }
+
+        function canInsert(board, slotIndex, possibleAnswerIdx) {
+            var slot = slots[slotIndex];
+            var possibleAnswer = slot.guesses[possibleAnswerIdx];
+            if (!possibleAnswer.name) return false;
+            //console.log(possibleAnswer)
+            //console.log(slot);
+            for (var i = 0; i < possibleAnswer.name.length; i++) {
+                var curX = slot.startx;
+                var curY = slot.starty;
+                if (slot.orientation == "across")
+                    curX += i;
+                else
+                    curY += i;
+
+                var curC = board[curY][curX];
+                // if curC is a real char and is different from what we want to insert
+                if (curC !== ' ' && curC != possibleAnswer.name[i]) {
+                    //console.log("curC is " + curC + " so returning false\n");
+                    return false;
+                }
+            }
+            //console.log("FITS\n");
+            return true;
+        }
+
+        function insert (board, slotIndex, possibleAnswerIdx) {
+            var slot = slots[slotIndex];
+            var possibleAnswer = slot.guesses[possibleAnswerIdx];
+        
+            var newBoard = clone(board); // deep copy
+            for (var i = 0; i < possibleAnswer.name.length; i++) {
+                var curX = slot.startx;
+                var curY = slot.starty;
+                if (slot.orientation == "across")
+                    curX += i;
+                else
+                    curY += i;
+                newBoard[curY][curX] = possibleAnswer.name[i];
+            }
+            slots[slotIndex].answer = possibleAnswer.name;
+            return newBoard;
+        }
+
+        // modifies slots
+        function fillInAnswer (board, slotIndex, possibleAnswerIdx) {
+            if (canInsert(board, slotIndex, possibleAnswerIdx)) {
+                var newBoard = insert(board, slotIndex, possibleAnswerIdx);
+                return newBoard;
+            }
+            return null;
+        }
+
+        function eraseAnswer (slotIndex) {
+            var newStr = "";
+            for (var i = 0; i < slots[slotIndex].len; i++) 
+                newStr += " ";
+            slots[slotIndex].answer = newStr;
+        }
+
+        function solve(board, cb, depth) {
+            updateBest(board);
+            if (new Date().getTime() - startTime > 1000) {
+                lockSlots(cb);
+                return;
+            }
+
+            function solve_helper(i, slotIndex, cb) {
+                var possibleAnswers = slots[slotIndex].guesses;
+
+                //console.log("solver_helper " + slotIndex + ", " + i + "/" + possibleAnswers.length);
+
+                if (i >= possibleAnswers.length) {
+                    cb(false);
+                    return;
+                }
+                var newBoard = fillInAnswer(board, slotIndex, i);
+                if (newBoard) {
+                    $timeout(function() {
+                        solve(newBoard, function(solved) {
+                            if (solved) {
+                                cb(true);
+                                return;
+                            }
+                            eraseAnswer(slotIndex);
+                            $timeout(function() { solve_helper(i+1, slotIndex, cb)}, 1);
+                        }, depth+1);
+                    }, 1);
+                } else {
+                    $timeout(function() { solve_helper(i+1, slotIndex, cb)}, 1);
+                }
+            }
+
+            var slotIndex = getSlotIndex(board);
+            if (slotIndex === -1) {
+              cb(false);
+            } else {
+                $timeout(function() { solve_helper(0, slotIndex, function(solved) {
+                    if (solved) {
+                        cb(true);
+                    } else {
+                        if (depth==1) {
+                            slots[slotIndex].answer = "*";
+                            lockSlots(cb);
+                        } else {
+                            cb(false);
+                        }
+                    }
+                })}, 1);
+            }
+        }    
+
+        solve(board, function(x) {
+            console.log("Done.");
+            console.log(slots);
+
+        }, 1);
+    }
+
+    $scope.solve = function() {
+        // initialize board
+        var board = new Array($scope.puzzle.gridHeight);
+        for(var i = 0; i < $scope.puzzle.gridHeight; i++) {
+            board[i] = new Array($scope.puzzle.gridWidth);
+            for (var j = 0; j < $scope.puzzle.gridWidth; j++) {
+                board[i][j] = '';
+            }
+        }
+
+        var k_max = 100000;
+        var k_cur = 0, e_cur = 0;
+
+        function temperature(x) {
+            return 1-x;
+        }
+
+        function transition_probability(e_cur, e_new, temp) {
+            if (e_new >= e_cur) return 1;
+            var prob = (0.2 - (e_cur - e_new)/1000) * temp;
+            console.log(prob);
+            return prob;
+        }
+
+        function updateUI() {
+            console.log(k_cur + ": " + e_cur);
+            for(var i = 0; i < $scope.puzzle.gridHeight; i++) {
+                for (var j = 0; j < $scope.puzzle.gridWidth; j++) {
+                    $('td[data-coords="'+(i+1)+','+(j+1)+'"] input').val(board[i][j]);
+                }
+            }
+        }
+
+        function slotIntersect(slot1, slot2) {
+            if (slot1.orientation == slot2.orientation) return null;
+            if (slot1.orientation != 'across') slotIntersect(slot2, slot1);
+
+            if (slot2.startx >= slot1.startx && slot2.startx < slot1.startx + slot1.len) {
+                if (slot1.starty >= slot2.starty && slot1.starty < slot2.starty + slot2.len) {
+                    return {
+                        slot1_idx: slot2.startx - slot1.startx,
+                        slot2_idx: slot1.starty - slot2.starty
+                    }
+                }
+            }
+            return null;
+        }
+
+        function anneal() {
+            if (k_cur % 1 == 0) updateUI();
+            // Pick a random slot
+            var slot_idx = Math.floor(Math.random()*$scope.puzzle.slots.length);
+            var slot = $scope.puzzle.slots[slot_idx];
+
+            // Pick a random guess
+            var guess_idx = Math.floor(Math.random()*$scope.puzzle.slots[slot_idx].guesses.length);
+            var guess = slot.guesses[guess_idx];
+            if (guess) {
+                // Compute new energy
+                var e_new = e_cur;
+                e_new += guess.conf;
+                if (slot.cur_guess) e_new -= slot.cur_guess.conf;
+                $scope.puzzle.slots.forEach(function (slot2) {
+                    if (!slot2.cur_guess) return;
+                    var intersect = slotIntersect(slot, slot2);
+                    if (intersect) {
+                        if (guess.name[intersect.slot1_idx] != slot2.cur_guess.name[intersect.slot2_idx]) {
+                            e_new -= slot2.cur_guess.conf;
+                        }
+                    }
+                });
+
+                // Consider transition
+                if (transition_probability(e_cur, e_new, temperature(k_cur/k_max)) > Math.random()) {
+                    // Update energy
+                    e_cur = e_new;
+
+                    // Update board
+                    for (var i = 0; i < slot.len; i++) {
+                        if (slot.orientation == 'across') {
+                            board[slot.startx + i - 1][slot.starty - 1] = guess.name[i];
+                        } else {
+                            board[slot.startx - 1][slot.starty + i - 1] = guess.name[i];
+                        }
+                    }
+
+                    // Update slots
+                    slot.cur_guess = guess;
+                    $scope.puzzle.slots.forEach(function (slot2) {
+                        if (!slot2.cur_guess) return;
+                        var intersect = slotIntersect(slot, slot2);
+                        if (intersect) {
+                            if (guess.name[intersect.slot1_idx] != slot2.cur_guess.name[intersect.slot2_idx]) {
+                                slot2.cur_guess = null;
+                            }
+                        }
+                    });
+                }
+            }
+            k_cur++;
+            if (k_cur < k_max) $timeout(anneal, 5000);
+        }
+        anneal();
+    }
 }
 
 function cropController($scope, $http, $routeParams) {
@@ -238,11 +630,11 @@ function cropController($scope, $http, $routeParams) {
         }
         $http.get('/api/puzzles/'+id)
             .success(function(puzzle) {
-                if (puzzle.status == "digitizing") {
+                if (puzzle.digitizing_status == "digitizing") {
                     setTimeout(function() { $scope.pollPuzzle(id, ++count) }, 3000);
-                } else if (puzzle.status == "failure") {
+                } else if (puzzle.digitizing_status == "failure") {
                     $scope.loadingFailure("We were unable to digitize your puzzle. Please ensure that the image URL you've entered is valid.")
-                } else if (puzzle.status == "success") {
+                } else if (puzzle.digitizing_status == "success") {
                     $scope.loadingSuccess(id);
                 }
             })
