@@ -39,6 +39,8 @@ module.exports.retrieve = function(id) {
 }
 
 function solr_guesses(clue, length, cb) {
+
+  /* inexact match query */
   var clue_query = clue.split(/[\s-]+/).map(function (str) {
     return str.trim().replace(/[^a-z0-9]/gi,'');
   }).filter(function (str) {
@@ -48,9 +50,13 @@ function solr_guesses(clue, length, cb) {
     cb(null, {});
     return;
   }
-  var query_str = "length:" + length + " AND " + "clue:" + clue_query;
-  var query = client.createQuery().q(query_str).restrict('score').start(0).rows(100);
-  client.search(query, function(err, obj) {
+  var query_inexact_str = "length:" + length + " AND " + "clue:" + clue_query;
+  var query_inexact = client.createQuery().q(query_inexact_str).restrict('score').start(0).rows(100);
+
+  var query_exact_str = "length:" + length + " AND clueExact:\"" + clue.trim().replace(/[^a-z0-9\s]/gi,'') +"\""
+  var query_exact = client.createQuery().q(query_exact_str).restrict('score').start(0).rows(100);
+
+  client.search(query_exact, function(err, obj) {
     if(err){
       cb(err, null);
     } else {
@@ -58,20 +64,42 @@ function solr_guesses(clue, length, cb) {
         return {name: doc.answer, conf: doc.score};
       });
 
-      //reduce guesses down: http://stackoverflow.com/questions/14446511/what-is-the-most-efficient-method-to-groupby-on-a-javascript-array-of-objects
-      var grouped_guesses =
-        Enumerable.from(guesses).groupBy(function(x){ return x.name; })
-          .select(function(x){
-            return {
-              name: x.key(),
-              conf: x.max(function(y){ return y.conf; })
-            };
-          }).toArray();
+      if (guesses.length == 0) {
+        client.search(query_inexact, function(err, obj) {
+          if(err){
+            cb(err, null);
+          } else {
+            var guesses = obj.response.docs.map(function (doc) {
+              return {name: doc.answer, conf: doc.score};
+            });
 
-      grouped_guesses.sort(function(guess1, guess2) {return guess2.conf - guess1.conf;})
-      grouped_guesses = grouped_guesses.slice(0,15);
-      cb(null, grouped_guesses);
+            var grouped_guesses =
+              Enumerable.from(guesses).groupBy(function(x){ return x.name; })
+                .select(function(x){
+                  return {
+                    name: x.key(),
+                    conf: x.max(function(y){ return Math.min(y.conf, 999); })
+                  };
+                }).toArray();
 
+            grouped_guesses.sort(function(guess1, guess2) {return guess2.conf - guess1.conf;})
+            grouped_guesses = grouped_guesses.slice(0,15);
+            cb(null, grouped_guesses);
+          }
+        });
+      } else {
+        var grouped_guesses =
+          Enumerable.from(guesses).groupBy(function(x){ return x.name; })
+            .select(function(x){
+              return {
+                name: x.key(),
+                conf: x.sum(function(y){ return 1000; })
+              };
+            }).toArray();
+        grouped_guesses.sort(function(guess1, guess2) {return guess2.conf - guess1.conf;})
+        grouped_guesses = grouped_guesses.slice(0,15);
+        cb(null, grouped_guesses);
+      }
      }
   });
 }
@@ -81,3 +109,5 @@ function clean_up(puzzle, err) {
   puzzle.answers_status = "failure";
   puzzle.save();
 }
+
+solr_guesses("Invoice word", 5, console.log);

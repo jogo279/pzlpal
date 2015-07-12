@@ -35,27 +35,23 @@ module.exports.update_puzzle = function(req, res) {
         if (err) {
             res.status(400).json({error: err.message});
         } else {
-            if (puzzle.digitizing_status == "success") {
-                res.status(400).json({error: "Already Digitized"});
-            } else {
-                puzzle.gridWidth = req.body.gridWidth;
-                puzzle.gridHeight = req.body.gridHeight;
-                puzzle.digitizing_status = "digitizing"
-                puzzle.save(function (err) {
-                    if (err) {
-                        res.status(400).json({error: err.message});
-                    } else {
-                        res.json(puzzle);
-                        require('./digitize').digitize(
-                            puzzle._id, 
-                            req.body.image_width,
-                            req.body.image_height,
-                            req.body.across_coords,
-                            req.body.down_coords
-                        );
-                    }
-                });
-            }
+            puzzle.gridWidth = req.body.gridWidth;
+            puzzle.gridHeight = req.body.gridHeight;
+            puzzle.digitizing_status = "digitizing"
+            puzzle.save(function (err) {
+                if (err) {
+                    res.status(400).json({error: err.message});
+                } else {
+                    res.json(puzzle);
+                    require('./digitize').digitize(
+                        puzzle._id, 
+                        req.body.image_width,
+                        req.body.image_height,
+                        req.body.across_coords,
+                        req.body.down_coords
+                    );
+                }
+            });
         }
     });
 }

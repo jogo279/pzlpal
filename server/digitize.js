@@ -17,11 +17,11 @@ module.exports.digitize = function(id, crop_width, crop_height, across_coords, d
       if (err && err.code != 'EEXIST') return clean_up(puzzle, err);
 
       // Download the image
-      download(puzzle.imageURL, dir + 'original.jpg', function(err) {
+      download(puzzle.imageURL, dir + 'original', function(err) {
         if (err) return clean_up(puzzle, err);
 
         // Find slots
-        get_slots(dir + 'original.jpg', puzzle.gridWidth, puzzle.gridHeight, function(err, slots, across_slot_nums, down_slot_nums) {
+        get_slots(dir + 'original.png', puzzle.gridWidth, puzzle.gridHeight, function(err, slots, across_slot_nums, down_slot_nums) {
           if (err) return clean_up(puzzle, err);
 
           // Build clues image
@@ -150,7 +150,7 @@ function build_clues_image(id, across_coords, down_coords, crop_width, crop_heig
 
   var dir = process.env.PZL_TMP + id + '/';
   // Get image dimensions and stretch coordinates based on difference between crop dimensions and real dimensions
-  sizeOf(dir + "original.jpg", function(err, dimensions) {
+  sizeOf(dir + 'original.png', function(err, dimensions) {
     var real_width = dimensions.width;
     var real_height = dimensions.height;
     across_coords = across_coords.map(function (coords, idx) {
@@ -184,7 +184,7 @@ function build_clues_image(id, across_coords, down_coords, crop_width, crop_heig
       function (coords, cb) {
         var image_name = coords.orientation + "-" + coords.idx;
         cp.exec(
-           "convert -extract " + coords.w + "x" + coords.h + "+" + coords.x + "+" + coords.y + " " + dir + "original.jpg " + dir + image_name + ".jpg",
+           "convert -extract " + coords.w + "x" + coords.h + "+" + coords.x + "+" + coords.y + " " + dir + 'original.png '  + dir + image_name + ".jpg",
            function (err, stdout, stderr) {
             if (err) {
               cb(err);
@@ -317,7 +317,8 @@ function get_clues(text, across_numbers, down_numbers, cb) {
     if (success) {
       look_ahead = 5;
     } else {
-      if (look_ahead < 10) look_ahead++;
+      //if (look_ahead < 10) 
+      look_ahead++;
       current.lines++;
       current.clue += " " + str.trim();
       if (current.lines >= 5 && current.num > 0) {
@@ -358,7 +359,7 @@ function extract_num(str, num) {
 /* Check if string starts with something like the number. */
 function similar_to(num, str) {
   var digits = num.toString().split('');
-  var chars = str.replace(/\W/g, '').split('');
+  var chars = str.replace(/\s+/g, '').split('');
   if (chars.length < digits.length) return false;
   for (var i = 0; i < digits.length; i++) {
     var c = chars[i];
@@ -368,7 +369,7 @@ function similar_to(num, str) {
         if (c!='o' && c!='O') return false;
         break;
       case '1':
-        if (c!='I' && c!='[' && c!= ']' && c!= '|' && c!='l') return false;
+        if (c!='i' && c!='I' && c!='[' && c!= ']' && c!= '|' && c!='l' && c!="'") return false;
         break;
       case '5':
         if (c!='S') return false;
@@ -421,12 +422,32 @@ function clean_up(puzzle, err) {
   return;
 }
 
+function extension(uri) {
+  return "." + uri.split(".").pop();
+}
+
 function download(uri, filename, cb){
+  var ext = extension(uri);
+  if (ext!= ".jpg" && ext != ".png" && ext != ".gif" && ext != ".bmp") {
+    cb(new Error("Wrong file type"));
+    return;
+  }
   request.head(uri, function(err, res, body){
     if (res.headers['content-length'] > 20000000) {
       cb(new Error("File over 20MB."));
     } else {
-      request(uri).pipe(fs.createWriteStream(filename)).on('close', cb);
+      request(uri).pipe(fs.createWriteStream(filename + ext)).on('close', function() {
+        cp.exec(
+           "convert " + filename + ext + " " + filename + ".png",
+           function (err, stdout, stderr) {
+            if (err) {
+              cb(err);
+              return;
+            }
+            cb(null);
+           }
+        );
+      });
     }
   });
 };

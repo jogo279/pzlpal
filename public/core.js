@@ -87,6 +87,7 @@ function puzzleController($scope, $http, $routeParams, $timeout) {
     $scope.loadPuzzle = function() {
         $http.get('api/puzzles/' + $routeParams.puzzle_id)
         .success(function(puzzle) {
+            console.log(puzzle);
             $scope.puzzle = puzzle;
             var slots = puzzle.slots;
             slots.forEach(function(slot) {
@@ -194,7 +195,6 @@ function puzzleController($scope, $http, $routeParams, $timeout) {
         }
 
         function lockSlots(cb) {
-            var done = true;
             var pending = 0;
             for (var i = 0; i < maxSlots.length; i++) {
                 if (maxSlots[i].answer.replace(/\s+/g, '')) {
@@ -236,28 +236,27 @@ function puzzleController($scope, $http, $routeParams, $timeout) {
                 }
 
                 var collisions = 0;
-                var num5Star = 0;
+                var numHighConf = 0;
                 for (var j = 0; j < slot.len; j++) {
                     var curX = slot.startx;
                     var curY = slot.starty;
                     if (slot.orientation == "across")
                         curX += j;
                     else
-                    curY += j;
+                        curY += j;
 
                     var curC = board[curY][curX];
                     if (curC !== ' ') collisions++;
                 }
-
                 // Check number of 5 star answer choices and pick clue with lowest one
                 for (var j = 0; j < slot.guesses.length; j++) {
-                    if (slot.guesses[j].conf > 20) {
-                        num5Star++;
+                    if (slot.guesses[j].conf >= 1000) {
+                        numHighConf++;
                     }
                 }
-
-                if (num5Star) {
-                    collisions =  (collisions * 50) - num5Star;
+                collisions *= 100;
+                if (numHighConf) {
+                    collisions += 20 - numHighConf;
                 }
 
 
@@ -266,6 +265,8 @@ function puzzleController($scope, $http, $routeParams, $timeout) {
                     mcSlotIndex = i;
                 }
             }
+            
+            var temp = slots[mcSlotIndex];
             return mcSlotIndex;
         }
 
@@ -338,7 +339,6 @@ function puzzleController($scope, $http, $routeParams, $timeout) {
             function solve_helper(i, slotIndex, cb) {
                 var possibleAnswers = slots[slotIndex].guesses;
 
-                //console.log("solver_helper " + slotIndex + ", " + i + "/" + possibleAnswers.length);
 
                 if (i >= possibleAnswers.length) {
                     cb(false);
