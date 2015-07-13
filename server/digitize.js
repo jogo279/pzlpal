@@ -12,7 +12,7 @@ module.exports.digitize = function(id, crop_width, crop_height, across_coords, d
     if (err) return clean_up(puzzle, err);
 
     // Set up workspace
-    var dir = process.env.PZL_TMP + id + '/';
+    var dir = 'public/images/' + id + '/';
     fs.mkdir(dir, function(err) {
       if (err && err.code != 'EEXIST') return clean_up(puzzle, err);
 
@@ -148,7 +148,7 @@ function build_clues_image(id, across_coords, down_coords, crop_width, crop_heig
   across_coords = across_coords.slice(0, 10);
   down_coords = down_coords.slice(0, 10);
 
-  var dir = process.env.PZL_TMP + id + '/';
+  var dir = 'public/images/' + id + '/';
   // Get image dimensions and stretch coordinates based on difference between crop dimensions and real dimensions
   sizeOf(dir + 'original.png', function(err, dimensions) {
     var real_width = dimensions.width;
@@ -216,7 +216,7 @@ function build_clues_image(id, across_coords, down_coords, crop_width, crop_heig
 
 /* Extract text from an image. First tries NewOCR, and then tesseract if that fails. */
 function get_text(id,  cb) {
-  var dir = process.env.PZL_TMP + id + '/';
+  var dir = 'public/images/' + id + '/';
   request.post({
     url: 'http://api.newocr.com/v1/upload?key=' + process.env.NEWOCR_KEY,
     formData: {
@@ -418,7 +418,7 @@ function clean_up(puzzle, err) {
   console.log(err);
   puzzle.digitizing_status = "failure";
   puzzle.save();
-  //remove_folder(process.env.PZL_TMP + puzzle._id + '/', function(err) { console.log(err)});
+  //remove_folder('public/images/' + puzzle._id + '/', function(err) { console.log(err)});
   return;
 }
 

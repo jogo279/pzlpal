@@ -1,5 +1,5 @@
 // public/core.js
-var pzlPal = angular.module('pzlPal', []);
+var pzlPal = angular.module('pzlPal', ['ngFileUpload']);
 
 pzlPal.config(function($routeProvider) {
     $routeProvider
@@ -21,61 +21,48 @@ pzlPal.config(function($routeProvider) {
         })
 });
 
-function createController($scope, $http) {
-    $scope.formData = { pzlName: "Example Puzzle", imageURL: "http://s28.postimg.org/rulmey7wc/file_page1.jpg"};
+function createController($scope, $http, Upload) {
+    $scope.formData = {};
 
     // when submitting the add form, send the text to the node API
     $scope.createPuzzle = function() {
-        if ($scope.formData.pzlName.length <= 0 || $scope.formData.pzlName.length > 100) {
-            $('#errors').text("Invalid puzzle name.");
-            return;
+        $('#errors').text("");
+        if ($scope.imageFile) {
+            Upload.upload({
+              url: 'api/puzzles',
+              method: 'POST',
+              file: $scope.imageFile[0]
+            }).success($scope.createSuccess).error($scope.createFailure);
+        } else {
+            Upload.upload({
+              url: 'api/puzzles',
+              method: 'POST',
+              data: $scope.formData
+            }).success($scope.createSuccess).error($scope.createFailure);
         }
-        if ($scope.formData.imageURL.length <= 0 || $scope.formData.imageURL.length > 200) {
-            $('#errors').text("Invalid puzzle image.");
-            return;
-        }
-
-        $http.post('/api/puzzles', $scope.formData)
-            .success(function(puzzle) {
-                window.location.hash = "#/" + puzzle._id + "/crop"
-            })
-            .error(function(data) {
-                $('#errors').text("There were some errors in your submission. Please review and submit again.");
-            });
     };
 
-    // uploading file to imgur - https://github.com/paulrouget/miniuploader
-    $scope.upload = function(file) {
-        $('#upload-text').text("Uploading...");
-        $('#submitBtn').prop("disabled", true);
-        $('#uploadBtn').prop("disabled", true);
-        $('#errors').text("");
-         /* Is the file an image? */
-        if (!file || !file.type.match(/image.*/)) return;
-        document.body.className = "uploading";
+    $scope.createSuccess = function(data, status, headers, config) {
+        window.location.hash = "#/" + data._id + "/crop";
+    }
 
-        /* Lets build a FormData object*/
-        var fd = new FormData(); 
-        fd.append("image", file); 
-        var xhr = new XMLHttpRequest();
-        xhr.open("POST", "https://api.imgur.com/3/image.json");
-        xhr.onload = function() {
-            var url = JSON.parse(xhr.responseText).data.link;
-            $scope.formData.imageURL = url;
-            $('#imageURL').val(url);
-            $('#upload-text').html("Upload Complete! <a href = '" + url + "' target='_blank'>See Image</a>");
-            $('#submitBtn').prop("disabled", false);
-            $('#uploadBtn').prop("disabled", false);
+    $scope.createFailure = function(data, status, headers, config) {
+        $('#errors').text("We were unable to process your image. Please review and submit again.");
+    }
+
+    $scope.fileSelect = function() {
+        if ($scope.imageFile && $scope.imageFile.length > 0) {
+            $('#file-field').val($scope.imageFile[0].name);
         }
-        xhr.onerror = function() {
-            $('#upload-text').html("Upload Failed. Please try uploading to <a href = 'http://imgur.com' target='_blank'>Imgur.com</a> and pasting the link.</a>" );
-            $('#submitBtn').prop("disabled", false);
-            $('#uploadBtn').prop("disabled", false);
-        }
-        
-        xhr.setRequestHeader('Authorization', 'Client-ID 1f3bd725719b78b'); // Get your own key http://api.imgur.com/
-        
-        xhr.send(fd);
+    }
+
+    $scope.clearFile = function() {
+        delete $scope.imageFile;
+        $('#file-field').val("");
+    }
+
+    $scope.clearURL = function() {
+        delete $scope.formData.imageURL;
     }
 
 }

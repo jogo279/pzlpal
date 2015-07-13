@@ -1,18 +1,18 @@
 <div>
   <div class="well">
-    <h1>{{puzzle.name}}</h1>
+    <h1>Puzzle Cropping Tool</h1>
     <h3>Please use the cropping tool to select all of the clues from the image. For best results, select at most one column at a time, avoid extraneous text, and add the clues in order. When you're done, press "Digitize Puzzle"!</h3>
   </div>
   <div class="row-fluid">
     <div class="well col-md-7">
-      <img id="jcrop_target" ng-src = "{{puzzle.imageURL}}" class="img-responsive" ng-init="loadCropper()">
+      <img id="jcrop_target" ng-src = "{{'images/' + puzzle._id + '/original.png'}}" class="img-responsive" ng-init="loadCropper()">
     </div>
     <div class="col-md-5">
       <div class="well">
         <h1>Current Selection</h1>
         <div style="min-height:200px">
           <div id="preview" style="width:200px;height:200px;overflow:hidden;visibility:hidden">
-            <img src="{{puzzle.imageURL}}">
+            <img src="{{'images/' + puzzle._id + '/original.png'}}">
           </div>
         </div>
         <br>

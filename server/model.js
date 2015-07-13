@@ -14,7 +14,6 @@ var slotSchema = {
     guesses : [guessSchema]
 };
 var puzzleSchema = {
-    name : {type : String, minlength: 1, maxlength: 100},
     digitizing_status : {type : String, enum: ['waiting', 'digitizing', 'success', 'failure']},
     answers_status : {type : String, enum: ['waiting', 'retrieving', 'success', 'failure']},
     slots : [slotSchema],
