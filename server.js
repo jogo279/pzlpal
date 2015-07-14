@@ -16,7 +16,7 @@ app.use(bodyParser.json());                                     // parse applica
 app.use(bodyParser.json({ type: 'application/vnd.api+json' })); // parse application/vnd.api+json as json
 app.use(methodOverride());
 
-multiparty = require('connect-multiparty')({uploadDir: 'public/images/', maxFilesSize: 10000000});
+multiparty = require('connect-multiparty')({uploadDir: require('./server/config').app_dir + '/public/images/', maxFilesSize: 10000000});
 
 // define model =================
 var model = require('./server/model');

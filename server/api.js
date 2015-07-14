@@ -32,9 +32,9 @@ module.exports.create_puzzle = function(req, res) {
         } else {
             createEmptyPuzzle(function(puzzle) {
                 var id = puzzle._id;
-                fs.mkdir('public/images/' + id, function(err) {
+                fs.mkdir(require('./config').app_dir + '/public/images/' + id, function(err) {
                     cp.exec(
-                        "convert " + file.path + " " + 'public/images/' + id + "/original.png",
+                        "convert " + file.path + " " + require('./config').app_dir + '/public/images/' + id + "/original.png",
                         function(err, stdout, stderr) {
                             if (err) {
                                 res.status(400).json({error: err.message});
@@ -63,10 +63,10 @@ module.exports.create_puzzle = function(req, res) {
             } else {
                 createEmptyPuzzle(function(puzzle) {
                     var id = puzzle._id;
-                    fs.mkdir('public/images/' + id, function(err) {
-                        request(uri).pipe(fs.createWriteStream('public/images/' + id + '/original.' + ext)).on('close', function() {
+                    fs.mkdir(require('./config').app_dir + '/public/images/' + id, function(err) {
+                        request(uri).pipe(fs.createWriteStream(require('./config').app_dir + '/public/images/' + id + '/original.' + ext)).on('close', function() {
                             cp.exec(
-                                "convert " + 'public/images/' + id + "/original." + imageType(res2.headers['content-type']) + " " + 'public/images/' + id + "/original.png",
+                                "convert " + require('./config').app_dir + '/public/images/' + id + "/original." + imageType(res2.headers['content-type']) + " " + require('./config').app_dir + '/public/images/' + id + "/original.png",
                                 function(err, stdout, stderr) {
                                     if (err) {
                                         res.status(400).json({error: err.message});

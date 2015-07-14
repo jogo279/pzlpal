@@ -12,7 +12,7 @@ module.exports.digitize = function(id, crop_width, crop_height, grid_coords, acr
     if (err) return clean_up(puzzle, err);
 
     // Set up workspace
-    var dir = 'public/images/' + id + '/';
+    var dir = require('./config').app_dir + '/public/images/' + id + '/';
 
     // Scale grid
     scale(id, crop_width, crop_height, grid_coords, function(scaled_coords) {
@@ -73,7 +73,7 @@ module.exports.digitize = function(id, crop_width, crop_height, grid_coords, acr
 
 /* Scales coords according to how image was scaled */
 function scale(id, crop_width, crop_height, coords, cb) {
-  var dir = 'public/images/' + id + '/';
+  var dir = require('./config').app_dir + '/public/images/' + id + '/';
   sizeOf(dir + 'original.png', function(err, dimensions) {
     var real_width = dimensions.width;
     var real_height = dimensions.height;
@@ -165,7 +165,7 @@ function build_clues_image(id, across_coords, down_coords, crop_width, crop_heig
   across_coords = across_coords.slice(0, 10);
   down_coords = down_coords.slice(0, 10);
 
-  var dir = 'public/images/' + id + '/';
+  var dir = require('./config').app_dir + '/public/images/' + id + '/';
   // Get image dimensions and stretch coordinates based on difference between crop dimensions and real dimensions
   sizeOf(dir + 'original.png', function(err, dimensions) {
     var real_width = dimensions.width;
@@ -233,7 +233,7 @@ function build_clues_image(id, across_coords, down_coords, crop_width, crop_heig
 
 /* Extract text from an image. First tries NewOCR, and then tesseract if that fails. */
 function get_text(id,  cb) {
-  var dir = 'public/images/' + id + '/';
+  var dir = require('./config').app_dir + '/public/images/' + id + '/';
   request.post({
     url: 'http://api.newocr.com/v1/upload?key=' + require('./config').newocr_key,
     formData: {
@@ -439,7 +439,7 @@ function clean_up(puzzle, err) {
   console.log(err);
   puzzle.digitizing_status = "failure";
   puzzle.save();
-  //remove_folder('public/images/' + puzzle._id + '/', function(err) { console.log(err)});
+  //remove_folder(require('./config').app_dir + '/public/images/' + puzzle._id + '/', function(err) { console.log(err)});
   return;
 }
 
