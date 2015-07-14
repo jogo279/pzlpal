@@ -92,7 +92,7 @@ function scale(id, crop_width, crop_height, coords, cb) {
  * assuming standard crossword numbering. */
 function get_slots(file, width, height, grid_coords, cb) {
   cp.exec(
-    "python " + require('./config').app_dir + '/server/find_grid.py " + file + " " + width + " " + height + " " + grid_coords.x + " " + grid_coords.y + " " + grid_coords.w + " " + grid_coords.h,
+    "python " + require('./config').app_dir + "/server/find_grid.py " + file + " " + width + " " + height + " " + grid_coords.x + " " + grid_coords.y + " " + grid_coords.w + " " + grid_coords.h,
     function (err, stdout, stderr) {
       if (err) {
         cb(err, null, null, null);
