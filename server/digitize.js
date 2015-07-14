@@ -235,7 +235,7 @@ function build_clues_image(id, across_coords, down_coords, crop_width, crop_heig
 function get_text(id,  cb) {
   var dir = 'public/images/' + id + '/';
   request.post({
-    url: 'http://api.newocr.com/v1/upload?key=' + process.env.NEWOCR_KEY,
+    url: 'http://api.newocr.com/v1/upload?key=' + require('config').newocr_key,
     formData: {
       file: fs.createReadStream(dir + "clues.jpg")
     }
@@ -254,7 +254,7 @@ function get_text(id,  cb) {
       );
     } else {
       var file_id = JSON.parse(body).data.file_id;
-      request.get('http://api.newocr.com/v1/ocr?key=' + process.env.NEWOCR_KEY + '&page=1&lang=eng&psm=6&file_id=' + file_id, 
+      request.get('http://api.newocr.com/v1/ocr?key=' + require('config').newocr_key + '&page=1&lang=eng&psm=6&file_id=' + file_id, 
         function(err, response, body) {
           cb(null, JSON.parse(body).data.text);
         });
