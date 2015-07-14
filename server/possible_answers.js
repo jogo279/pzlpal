@@ -3,7 +3,7 @@ var Puzzle = model.Puzzle;
 var async = require('async');
 var solr = require('solr-client');
 var Enumerable = require('linq');
-var client = solr.createClient(require('./config').solr_domain, require('./config').solr_port, '', require('./config').newocr_key.solr_path);
+var client = solr.createClient(require('./config').solr_domain, require('./config').solr_port, '', require('./config').solr_path);
 
 module.exports.retrieve = function(id) {
   Puzzle.findOne({ '_id' : id}, function(err, puzzle) {
