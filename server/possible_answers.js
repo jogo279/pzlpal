@@ -42,7 +42,7 @@ function solr_guesses(clue, length, cb) {
 
   /* inexact match query */
   var clue_query = clue.split(/[\s-]+/).map(function (str) {
-    return str.trim().replace(/[^a-z0-9]/gi,'');
+    return str.trim().replace(/[^a-z0-9-_]/gi,'');
   }).filter(function (str) {
     return str.length >= 2;
   }).join("|");
@@ -109,5 +109,3 @@ function clean_up(puzzle, err) {
   puzzle.answers_status = "failure";
   puzzle.save();
 }
-
-solr_guesses("Invoice word", 5, console.log);

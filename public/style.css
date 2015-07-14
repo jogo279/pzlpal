@@ -7,8 +7,8 @@ table tr{
   width: 100%;
 }
 table td {
-  width: 5em;
-  height: 5em;
+  width: 2.5em;
+  height: 2.5em;
   border: 1px solid #cdcdcd;
   padding: 0;
   margin: 0;
@@ -22,7 +22,7 @@ td input {
   padding: 0em;
   border: none;
   text-align: center;
-  font-size: 3em;
+  font-size: 2.5em;
   color: #666;
   background-color: #f4f4f4;
 }

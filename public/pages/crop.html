@@ -1,27 +1,31 @@
 <div>
   <div class="well">
     <h1>Puzzle Cropping Tool</h1>
-    <h3>Please use the cropping tool to select all of the clues from the image. For best results, select at most one column at a time, avoid extraneous text, and add the clues in order. When you're done, press "Digitize Puzzle"!</h3>
+    <h3>Please use the cropping tool to select the grid and all of the clues from the image. For best results, select at most one column at a time, avoid extraneous text, and add the clues in numerical order. When you're done, press "Digitize Puzzle"!</h3>
   </div>
   <div class="row-fluid">
     <div class="well col-md-7">
-      <img id="jcrop_target" ng-src = "{{'images/' + puzzle._id + '/original.png'}}" class="img-responsive" ng-init="loadCropper()">
+      <img id="jcrop_target" ng-src = "{{puzzle.imageURL}}" class="img-responsive" ng-init="loadCropper()">
     </div>
     <div class="col-md-5">
       <div class="well">
         <h1>Current Selection</h1>
         <div style="min-height:200px">
           <div id="preview" style="width:200px;height:200px;overflow:hidden;visibility:hidden">
-            <img src="{{'images/' + puzzle._id + '/original.png'}}">
+            <img ng-src="{{puzzle.imageURL}}">
           </div>
         </div>
         <br>
         <div>
+          <button type="submit" class="btn btn-primary btn-lg" ng-click="addGrid()">Set As Grid</button>
           <button type="submit" class="btn btn-primary btn-lg" ng-click="addAcross()">Add to Across Clues</button>
           <button type="submit" class="btn btn-primary btn-lg" ng-click="addDown()">Add to Down Clues</button>
         </div>
       </div>
       <div class="well">
+        <h1>Grid (<a href="" ng-click="clearGrid()">clear</a>)</h1>
+        <div id="grid-container"></div>
+        <hr style="clear:both;border:transparent">
         <h1>Across Clues (<a href="" ng-click="clearAcross()">clear</a>)</h1>
         <div id="across-container"></div>
         <hr style="clear:both;border:transparent">

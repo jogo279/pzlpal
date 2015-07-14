@@ -57,9 +57,9 @@ module.exports.create_puzzle = function(req, res) {
         var ext = uri.split(".").pop();
         request.head(uri, function(err, res2, body){
             if (res2.headers['content-length'] > 10000000) {
-                res2.status(400).json({error: "File over 10MB"});
+                res.status(400).json({error: "File over 10MB"});
             } else if (!imageType(res2.headers['content-type'])) {
-                res2.status(400).json({error: "Not an image"});
+                res.status(400).json({error: "Not an image"});
             } else {
                 createEmptyPuzzle(function(puzzle) {
                     var id = puzzle._id;
@@ -112,6 +112,7 @@ module.exports.update_puzzle = function(req, res) {
                         puzzle._id, 
                         req.body.image_width,
                         req.body.image_height,
+                        req.body.grid_coords,
                         req.body.across_coords,
                         req.body.down_coords
                     );

@@ -25,7 +25,7 @@
         <div class="form-group">
           <label>&mdash; OR &mdash;</label>
         </div>     
-
+    
         <div class="form-group">
           <label for="imageURL" class="col-lg-3 control-label">Picture URL</label>
           <div class="col-lg-6">
@@ -35,15 +35,30 @@
                 <button class="btn btn-danger" type="button" ng-click="clearURL()">X</button>
               </span>
             </div>
+            <div>
+              <button class="btn btn-default" style="float:left" ng-repeat="example in examples" ng-click="loadExample(example.url)">{{example.name}}</button>
+            </div>
           </div>
         </div>
 
         <div class="form-group">
             <button id = "submitBtn" type="submit" class="btn btn-info btn-lg" ng-click="createPuzzle()">Digitize Puzzle</button>
         </div>
+        <div class="form-group" id="loadingDiv" style="display:none">
+              <img src = "loading.gif" id= "loadingImg">
+        </div>
         <div class="form-group" id="errorsDiv">
           <p id="errors"></p>
         </div>
+      <div class="form-group">
+        <h1>Guidelines</h1>
+        <p>The allowed file types are <strong>.jpg</strong>, <strong>.gif</strong>, <strong>.png</strong>, and <strong>.bmp</strong>, and the maximum image size is 10MB.</p>
+        <p>The picture should contain the crossword grid and puzzle clues.</p>
+        <p>Images should be high resolution (i.e. big text). Screenshots may or may not work.</p>
+        <p>The picture should be taken from a bird's eye view, and not from an angle.</p>
+      </div>
+
       </form>
     </div>
+      
 </div>

@@ -7,75 +7,92 @@ var sizeOf = require('image-size');
 var async = require('async');
 var request = require('request');
 
-module.exports.digitize = function(id, crop_width, crop_height, across_coords, down_coords) {
+module.exports.digitize = function(id, crop_width, crop_height, grid_coords, across_coords, down_coords) {
   Puzzle.findOne({ '_id' : id}, function(err, puzzle) {
     if (err) return clean_up(puzzle, err);
 
     // Set up workspace
     var dir = 'public/images/' + id + '/';
-    fs.mkdir(dir, function(err) {
-      if (err && err.code != 'EEXIST') return clean_up(puzzle, err);
 
-      // Download the image
-      download(puzzle.imageURL, dir + 'original', function(err) {
+    // Scale grid
+    scale(id, crop_width, crop_height, grid_coords, function(scaled_coords) {
+
+      // Find slots
+      get_slots(dir + 'original.png', puzzle.gridWidth, puzzle.gridHeight, scaled_coords, function(err, slots, across_slot_nums, down_slot_nums) {
         if (err) return clean_up(puzzle, err);
 
-        // Find slots
-        get_slots(dir + 'original.png', puzzle.gridWidth, puzzle.gridHeight, function(err, slots, across_slot_nums, down_slot_nums) {
+        // Build clues image
+        build_clues_image(puzzle._id, across_coords, down_coords, crop_width, crop_height, function(err, text) {
           if (err) return clean_up(puzzle, err);
 
-          // Build clues image
-          build_clues_image(puzzle._id, across_coords, down_coords, crop_width, crop_height, function(err, text) {
+          // Get text from image
+          get_text(puzzle._id, function(err, text) {
             if (err) return clean_up(puzzle, err);
 
-            // Get text from image
-            get_text(puzzle._id, function(err, text) {
+            // Split up text into clues
+            get_clues(text, across_slot_nums, down_slot_nums, function (err, across_clues, down_clues) {
               if (err) return clean_up(puzzle, err);
 
-              // Split up text into clues
-              get_clues(text, across_slot_nums, down_slot_nums, function (err, across_clues, down_clues) {
-                if (err) return clean_up(puzzle, err);
-
-                // Add clues to slots and save
-                slots.forEach(function(slot) {
-                  if (slot.orientation == "across") {
-                    slot.clue = across_clues[slot.position];
-                    if (slot.clue == null) {
-                      slot.clue = "";
-                    }
-                  } else {
-                    slot.clue = down_clues[slot.position];
-                    if (slot.clue == null) {
-                      slot.clue = "";
-                    }
+              // Add clues to slots and save
+              slots.forEach(function(slot) {
+                if (slot.orientation == "across") {
+                  slot.clue = across_clues[slot.position];
+                  if (slot.clue == null) {
+                    slot.clue = "";
                   }
-                });
-                Puzzle.update({_id: id}, {'$set': {
-                  'digitizing_status': 'success',
-                  'slots': slots
-                }}, function(err) {
-                  if (err) {
-                    console.log(err.stack);
-                  } else {
-                    console.log("Success");
+                } else {
+                  slot.clue = down_clues[slot.position];
+                  if (slot.clue == null) {
+                    slot.clue = "";
                   }
-                });
+                }
               });
-            });            
+              Puzzle.update({_id: id}, {'$set': {
+                'digitizing_status': 'success',
+                'slots': slots
+              }}, function(err) {
+                if (err) {
+                  console.log(err.stack);
+                } else {
+                  console.log("Success");
+                }
+              });
+            });
           });            
-        });
+        });            
       });
+
+
+
+
     });
   });
 }
 
 
 
+/* Scales coords according to how image was scaled */
+function scale(id, crop_width, crop_height, coords, cb) {
+  var dir = 'public/images/' + id + '/';
+  sizeOf(dir + 'original.png', function(err, dimensions) {
+    var real_width = dimensions.width;
+    var real_height = dimensions.height;
+    cb({
+      x : coords.x * real_width / crop_width,
+      y : coords.y * real_height / crop_height,
+      x2 : coords.x2 * real_width / crop_width,
+      y2 : coords.y2 * real_height / crop_height,
+      w : coords.w * real_width / crop_width,
+      h : coords.h * real_height / crop_height,
+    });
+  });
+}
+
 /* Given an image, uses find_grid.py to find the puzzle grid in the image, then determines all of the slots by
  * assuming standard crossword numbering. */
-function get_slots(file, width, height, cb) {
+function get_slots(file, width, height, grid_coords, cb) {
   cp.exec(
-    "python server/find_grid.py " + file + " " + width + " " + height,
+    "python server/find_grid.py " + file + " " + width + " " + height + " " + grid_coords.x + " " + grid_coords.y + " " + grid_coords.w + " " + grid_coords.h,
     function (err, stdout, stderr) {
       if (err) {
         cb(err, null, null, null);
@@ -247,7 +264,7 @@ function get_text(id,  cb) {
 
 /* Divides up text into clues by parsing the numbers in the text. */
 function get_clues(text, across_numbers, down_numbers, cb) {
-  var look_ahead = 5, allow_across = true, allow_down = false;
+  var look_ahead = 10, allow_across = true, allow_down = false;
   var across_cutoff = across_numbers[Math.floor(across_numbers.length*.8)];
   var down_cutoff = down_numbers[Math.floor(down_numbers.length*.3)];
   var across_clues = [], down_clues = [];
@@ -282,6 +299,7 @@ function get_clues(text, across_numbers, down_numbers, cb) {
           };
           if (across_numbers[j] >= across_cutoff) allow_down = true;
           across_numbers.splice(j,1);
+          look_ahead = j+9;
           success = true;
           break;
         }
@@ -307,17 +325,15 @@ function get_clues(text, across_numbers, down_numbers, cb) {
             orientation: "down"
           };
           if (down_numbers[j] > down_cutoff) allow_across = false;
-          down_numbers.splice(j,1);          
+          down_numbers.splice(j,1);  
+          look_ahead = j+9;        
           success = true;
           break;
         }
       }
     }
 
-    if (success) {
-      look_ahead = 5;
-    } else {
-      //if (look_ahead < 10) 
+    if (!success) {
       look_ahead++;
       current.lines++;
       current.clue += " " + str.trim();
@@ -352,7 +368,7 @@ function extract_num(str, num) {
   var len = num.toString().length;
   var trim = str.trim();
   var extracted = trim.substr(len, trim.length).trim();
-  if (extracted[0] == '.') return extracted.substr(1, extracted.length).trim();
+  if (extracted[0] == '.' || extracted[0] == ')' || extracted[0] == '-') return extracted.substr(1, extracted.length).trim();
   return extracted;
 }
 
@@ -366,7 +382,7 @@ function similar_to(num, str) {
     if (c==digits[i]) continue;
     switch (digits[i]) {
       case '0':
-        if (c!='o' && c!='O') return false;
+        if (c!='o' && c!='O' && c!='6' && c!= '8') return false;
         break;
       case '1':
         if (c!='i' && c!='I' && c!='[' && c!= ']' && c!= '|' && c!='l' && c!="'") return false;
@@ -374,6 +390,11 @@ function similar_to(num, str) {
       case '5':
         if (c!='S') return false;
         break;
+      case '7':
+        if (c!='?') return false;
+        break;
+      case '8':
+        if (c!='3') return false;
       case '9':
         if (c!='g') return false;
         break;
@@ -422,32 +443,7 @@ function clean_up(puzzle, err) {
   return;
 }
 
-function extension(uri) {
-  return "." + uri.split(".").pop();
-}
-
-function download(uri, filename, cb){
-  var ext = extension(uri);
-  if (ext!= ".jpg" && ext != ".png" && ext != ".gif" && ext != ".bmp") {
-    cb(new Error("Wrong file type"));
-    return;
-  }
-  request.head(uri, function(err, res, body){
-    if (res.headers['content-length'] > 20000000) {
-      cb(new Error("File over 20MB."));
-    } else {
-      request(uri).pipe(fs.createWriteStream(filename + ext)).on('close', function() {
-        cp.exec(
-           "convert " + filename + ext + " " + filename + ".png",
-           function (err, stdout, stderr) {
-            if (err) {
-              cb(err);
-              return;
-            }
-            cb(null);
-           }
-        );
-      });
-    }
-  });
-};
+// var text = "1 Owner's directions\n 1; 3:33:\n i: at, if\"\n a e\n 20 Greetings\n 21 Nice season\n 22 Protess\n 23 CARGIL?\n 25 Simile words\n 28 Bougeinvillea.1or\n one\n 27 On the up and up\n 28 ADLAS?\n 31 Beverage\n measure\n adam's address\n `rewory\n 37 Sacred structures\n a gteelr's cousin\n reel 359\"\n 46\n 47 Actor lynn\n 49 Rooter\n g; Streetweapon\n 53 6836?\n 58 Wrath\n 59 Roasting chamber\n 61 Holbein\n 62 Solder\n 63 Nixon's nemesis\n 65 Redeoorate\n 66 interrogate\n 67 Tows\n 69 Painter's needs.\n for short\n 70 Handbag\n 72 Aesop ending\n 73 Hawkins Day\n 74 (flier Palmer\n 75 Intistinct\n 73 the\n on\n 77 USNnggss\n 80 Remainder\n 31 Sucootash\n ingredient\n 82 Suppress a news\n story\n 33 Flat boat\n 84 Author Deighton\n 3 EtgPA?\n ret\n 91 Payable\n 93 Forest denizen\n 94 Aplomb\n as Way overweight\n 97 Gobi. lor one\n 99 Worried\n 101 Finally!\n 8: E's`é`éfim\n \n103 Iowa University\n 109 WES?\n 113 AKA\n 115 Jet\n 113 Corp. money\n monitor\n 117 KEATS?\n 1 Educational inst.\n Barbie's\n 125 Sprinkler a denda\n 3: 9- W8\n ay\n 12!! Mynvt'e. counterpart\n 129 kiddi I\n 130 Weucu' loulgy\n 1 Ma queen?\n 2 Bibrical ion\n 3 Bed Bobbsey's\n twin\n 4 Polluted\n 5 Pulitzer winner\n James: 1958\n 3 Part 01 HRH\n 9 Building addition\n 10 Got 011 ct\n 11 Elaborate art style\n 12 Beauty's beloved\n 13 Confused\n 14 Recldessly\n 15 Treats miserably\n 18 Maldous\n 17 Actress Olin\n 18 Mr. Rogers\n 24 Wander idly\n 29 Sineon\n so fiEie ollspring\n 31 Pollux' twin\n 32 Niche\n 33 UNSPER?\n 35 Standards\n 38 _ gestae:\n transactions\n 4o 'Frisoo hill\n 41 Wise. neighbor\n 43 MECAR?\n 44 Buenos\n 45 Actor Montana\n 47 Tape recorder\n button\n 3 uligwygganding\n e a Davy\n 50 Grow older\n 54 Run after\n 55 D sharp\n 56 Boring\n 57 Macho man\n 30 Grammar units\n 64 Operatic\n WW:\n 67 Pen or est\n folower\n 83 Vase\n 69 Set aside\n 71 Actress Moreno\n 72 Fool's mama\n 73 Figure out\n 7; ...or _ not?\n songs\n 76 Who _. Jamaica\n 73 Airy dessert\n 79 Candies\n 80 Churl\n 31 PFC's superior\n 82 Makes booties\n 38 Fad of the 708\n 87 Pkg. carrier\n 33 Caviar\n 39 Go bad\n 92 Gull\n 96 Used TNT\n 93 Access Charlotte\n 99 Put to good\n 100 _ keen!\n 101 Surrounded by\n 103 Bid\n 104 Once _ time\n 106 Slip\n 107 Brewslrie\n 109 Newman or Simon\n 1 10 Arm bone\n 111 Weather word\n 112 Beat it!\n 1 14 Italian wine region\n 113 Columbus inst\n 1 19 _ diem\n 120 Actor Walloon\n 121 The winner's take\n 122 Mary _ Place\n"
+// var across = [1,7,12,15,19,20,21,22,23,25,26,27,28,31,34,36,37,39,42,46,47,49,51,52,53,58,59,61,62,63,65,66,67,69,70,73,73,74,75,76,77,80,81,82,83,84,85,90,91,93,94,95,97,99,101,102,105,108,109,113,115,116,117,123,124,125,126,127,128,129,130]
+// var down = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,24,29,30,31,32,33,35,38,40,41,43,44,45,47,48,49,50,54,55,56,57,60,64,67,68,69,71,72,73,74,75,76,78,79,80,81,82,86,87,88,89,92,96,98,99,100,101,103,104,106,107,109,110,111,112,114,118,119,120,121,122]
+// get_clues(text, across, down, function(err, a,d) {console.log(a);console.log(d);});

@@ -23,10 +23,20 @@ pzlPal.config(function($routeProvider) {
 
 function createController($scope, $http, Upload) {
     $scope.formData = {};
-
+    $scope.examples = [
+        {name: "Example 1", url: "http://i.imgur.com/AiI3G0X.gif"},
+        {name: "Example 2", url: "http://i.imgur.com/RA3zN3c.jpg"},
+        {name: "Example 3", url: "http://i.imgur.com/6fwD9rh.jpg"},
+        {name: "Example 4", url: "http://i.imgur.com/aL7mGRF.jpg"},
+        {name: "Example 5", url: "http://i.imgur.com/8fr6qzG.png"},
+        {name: "Example 6", url: "http://i.imgur.com/gAm5tkN.jpg"}
+    ];
     // when submitting the add form, send the text to the node API
     $scope.createPuzzle = function() {
         $('#errors').text("");
+        $('#submitBtn').attr("disabled", "disabled");
+        $('#submitBtn').text("Retrieving Image...");
+        $('#loadingDiv').css("display", "block");
         if ($scope.imageFile) {
             Upload.upload({
               url: 'api/puzzles',
@@ -42,12 +52,21 @@ function createController($scope, $http, Upload) {
         }
     };
 
+    $scope.loadExample = function(url) {
+        $scope.formData.imageURL = url;
+        $scope.clearFile();
+        $scope.createPuzzle();
+    }
+
     $scope.createSuccess = function(data, status, headers, config) {
         window.location.hash = "#/" + data._id + "/crop";
     }
 
     $scope.createFailure = function(data, status, headers, config) {
         $('#errors').text("We were unable to process your image. Please review and submit again.");
+        $('#loadingDiv').css("display", "none");
+        $('#submitBtn').removeAttr("disabled");
+        $('#submitBtn').text("Digitize Puzzle");
     }
 
     $scope.fileSelect = function() {
@@ -81,6 +100,7 @@ function puzzleController($scope, $http, $routeParams, $timeout) {
                 slot.answer = new Array(slot.len + 1).join(' ');
             });
             $('#puzzle-wrapper').crossword(slots);
+            $('#clear').css('clear','both');
         })
         .error(function(data) {
             console.log(data);
@@ -486,6 +506,7 @@ function cropController($scope, $http, $routeParams) {
     $http.get('api/puzzles/' + $routeParams.puzzle_id)
         .success(function(puzzle) {
             $scope.puzzle = puzzle;
+            $scope.puzzle.imageURL = 'images/' + puzzle._id + '/original.png'
         })
         .error(function(data) {
             console.log(data);
@@ -499,6 +520,7 @@ function cropController($scope, $http, $routeParams) {
         $scope.formData.preview_coords = {w : 0, h : 0, x : 0, y : 0, x2 : 0, y2 : 0 };
         $scope.formData.across_coords = [];
         $scope.formData.down_coords = [];
+        $scope.formData.grid_coords = {};
 
     }
 
@@ -558,6 +580,19 @@ function cropController($scope, $http, $routeParams) {
         $('#down-container').html("");
     }
 
+    $scope.addGrid = function() {
+        if ($scope.formData.preview_coords.w > 5 && $scope.formData.preview_coords.h > 5) {
+            $scope.formData.grid_coords = $scope.formData.preview_coords;
+            $('#grid-container').append("<div style='overflow:hidden;float:left;margin:5px' id = 'grid'><img src='" + $scope.puzzle.imageURL + "'></div>");
+            $scope.scaleImage($scope.formData.preview_coords, "grid");
+        }
+    }
+
+    $scope.clearGrid = function() {
+        $scope.formData.grid_coords = {};
+        $('#grid-container').html("");
+    }
+
     $scope.validateAndSubmit = function() {
         // validate image
         $scope.formData.image_width = $('#jcrop_target').width();
@@ -586,6 +621,10 @@ function cropController($scope, $http, $routeParams) {
         }
 
         // validate coords
+        if ($.isEmptyObject($scope.formData.grid_coords)) {
+            $('#errors').text("Please set a grid.");
+            return;
+        }
         if ($scope.formData.across_coords.length == 0) {
             $('#errors').text("Please add the across clues.");
             return;
