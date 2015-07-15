@@ -513,12 +513,19 @@ function puzzleController($scope, $http, $routeParams, $timeout) {
 }
 
 function cropController($scope, $http, $routeParams) {
-    $scope.formData = {};
+    $scope.formData = {
+        preview_coords : {w : 0, h : 0, x : 0, y : 0, x2 : 0, y2 : 0 },
+        across_coords : [],
+        down_coords : [],
+        grid_coords : {}
+    };
 
     $http.get('api/puzzles/' + $routeParams.puzzle_id)
         .success(function(puzzle) {
             $scope.puzzle = puzzle;
             $scope.puzzle.imageURL = 'images/' + puzzle._id + '/original.png'
+            $scope.formData.gridWidth = puzzle.gridWidth;
+            $scope.formData.gridHeight = puzzle.gridHeight;
         })
         .error(function(data) {
             console.log(data);
@@ -529,10 +536,10 @@ function cropController($scope, $http, $routeParams) {
             onChange: $scope.showPreview,
             onSelect: $scope.showPreview
         });
-        $scope.formData.preview_coords = {w : 0, h : 0, x : 0, y : 0, x2 : 0, y2 : 0 };
-        $scope.formData.across_coords = [];
-        $scope.formData.down_coords = [];
-        $scope.formData.grid_coords = {};
+        console.log($scope.puzzle);
+        if ($scope.puzzle.grid_coords) $scope.addGrid($scope.puzzle.grid_coords);
+        $scope.puzzle.across_coords.forEach($scope.addAcross);
+        $scope.puzzle.down_coords.forEach($scope.addDown);
     }
 
     $scope.scaleImage = function(coords, container_id) {
@@ -565,11 +572,12 @@ function cropController($scope, $http, $routeParams) {
         $scope.formData.preview_coords = coords;
     }
 
-    $scope.addAcross = function() {
-        if ($scope.formData.preview_coords.w > 5 && $scope.formData.preview_coords.h > 5) {
-            $scope.formData.across_coords.push($scope.formData.preview_coords);
+    $scope.addAcross = function(coords) {
+        coords = typeof coords !== 'undefined' ? coords : $scope.formData.preview_coords;
+        if (coords.w > 5 && coords.h > 5) {
+            $scope.formData.across_coords.push(coords);
             $('#across-container').append("<div style='overflow:hidden;float:left;margin:5px' id = 'across-" + $scope.formData.across_coords.length + "'><img src='" + $scope.puzzle.imageURL + "'></div>");
-            $scope.scaleImage($scope.formData.preview_coords, "across-" + $scope.formData.across_coords.length);
+            $scope.scaleImage(coords, "across-" + $scope.formData.across_coords.length);
         }
     }
 
@@ -578,11 +586,12 @@ function cropController($scope, $http, $routeParams) {
         $('#across-container').html("");
     }
 
-    $scope.addDown = function() {
-        if ($scope.formData.preview_coords.w > 5 && $scope.formData.preview_coords.h > 5) {
-            $scope.formData.down_coords.push($scope.formData.preview_coords);
+    $scope.addDown = function(coords) {
+        coords = typeof coords !== 'undefined' ? coords : $scope.formData.preview_coords;
+        if (coords.w > 5 && coords.h > 5) {
+            $scope.formData.down_coords.push(coords);
             $('#down-container').append("<div style='overflow:hidden;float:left;margin:5px' id = 'down-" + $scope.formData.down_coords.length + "'><img src='" + $scope.puzzle.imageURL + "'></div>");
-            $scope.scaleImage($scope.formData.preview_coords, "down-" + $scope.formData.down_coords.length);
+            $scope.scaleImage(coords, "down-" + $scope.formData.down_coords.length);
         }
     }
 
@@ -591,11 +600,12 @@ function cropController($scope, $http, $routeParams) {
         $('#down-container').html("");
     }
 
-    $scope.addGrid = function() {
-        if ($scope.formData.preview_coords.w > 5 && $scope.formData.preview_coords.h > 5) {
-            $scope.formData.grid_coords = $scope.formData.preview_coords;
+    $scope.addGrid = function(coords) {
+        coords = typeof coords !== 'undefined' ? coords : $scope.formData.preview_coords;
+        if (coords.w > 5 && coords.h > 5) {
+            $scope.formData.grid_coords = coords;
             $('#grid-container').append("<div style='overflow:hidden;float:left;margin:5px' id = 'grid'><img src='" + $scope.puzzle.imageURL + "'></div>");
-            $scope.scaleImage($scope.formData.preview_coords, "grid");
+            $scope.scaleImage(coords, "grid");
         }
     }
 

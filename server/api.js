@@ -103,6 +103,9 @@ module.exports.update_puzzle = function(req, res) {
             puzzle.gridWidth = req.body.gridWidth;
             puzzle.gridHeight = req.body.gridHeight;
             puzzle.digitizing_status = "digitizing"
+            puzzle.grid_coords = req.body.grid_coords;
+            puzzle.across_coords = req.body.across_coords;
+            puzzle.down_coords = req.body.down_coords;
             puzzle.save(function (err) {
                 if (err) {
                     res.status(400).json({error: err.message});
