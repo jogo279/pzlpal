@@ -5,7 +5,7 @@
   </div>
   <div class="row-fluid">
     <div class="well col-md-7">
-      <img id="jcrop_target" ng-src = "{{puzzle.imageURL}}" class="img-responsive" ng-init="loadCropper()">
+      <img id="jcrop_target" ng-src = "{{puzzle.imageURL}}" class="img-responsive" imageonload="loadCropper()">
     </div>
     <div class="col-md-5">
       <div class="well">
@@ -17,9 +17,9 @@
         </div>
         <br>
         <div>
-          <button type="submit" class="btn btn-primary btn-lg" ng-click="addGrid()">Set As Grid</button>
-          <button type="submit" class="btn btn-primary btn-lg" ng-click="addAcross()">Add to Across Clues</button>
-          <button type="submit" class="btn btn-primary btn-lg" ng-click="addDown()">Add to Down Clues</button>
+          <button type="submit" style="padding:5px;margin-bottom:5px" class="btn btn-primary btn-md" ng-click="addGrid()">Set As Grid</button>
+          <button type="submit" style="padding:5px;margin-bottom:5px" class="btn btn-primary btn-md" ng-click="addAcross()">Add to Across Clues</button>
+          <button type="submit" style="padding:5px;margin-bottom:5px" class="btn btn-primary btn-md" ng-click="addDown()">Add to Down Clues</button>
         </div>
       </div>
       <div class="well">

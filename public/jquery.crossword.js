@@ -162,7 +162,7 @@
           puzInit.calcCoords();
           
           // Puzzle clues added to DOM in calcCoords(), so now immediately put mouse focus on first clue
-          clueLiEls = $('#puzzle-clues li');
+          clueLiEls = '#puzzle-clues li';
           $('#' + currOri + ' li' ).eq(0).addClass('clues-active').focus();
         
           // DELETE FOR BG
@@ -231,7 +231,7 @@
           - Adds tabindexes to <inputs> 
         */
         buildEntries: function() {
-          var puzzCells = $('#puzzle td'),
+          var puzzCells = '#puzzle td',
             light,
             $groupedLights,
             hasOffset = false,

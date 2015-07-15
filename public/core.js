@@ -1,6 +1,18 @@
 // public/core.js
 var pzlPal = angular.module('pzlPal', ['ngFileUpload']);
 
+pzlPal.directive('imageonload', function() {
+        return {
+            restrict: 'A',
+            link: function(scope, element, attrs) {
+                element.bind('load', function() {
+                    //call the function that was passed
+                    scope.$apply(attrs.imageonload);
+                });
+            }
+        };
+    });
+
 pzlPal.config(function($routeProvider) {
     $routeProvider
         .when('/', {
@@ -521,7 +533,6 @@ function cropController($scope, $http, $routeParams) {
         $scope.formData.across_coords = [];
         $scope.formData.down_coords = [];
         $scope.formData.grid_coords = {};
-
     }
 
     $scope.scaleImage = function(coords, container_id) {

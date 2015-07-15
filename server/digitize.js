@@ -27,6 +27,7 @@ module.exports.digitize = function(id, crop_width, crop_height, grid_coords, acr
 
           // Get text from image
           get_text(puzzle._id, function(err, text) {
+            console.log(text);
             if (err) return clean_up(puzzle, err);
 
             // Split up text into clues
