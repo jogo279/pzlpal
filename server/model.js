@@ -33,12 +33,14 @@ var puzzleSchema = {
     imageURL : {type : String, minlength: 1, maxlength: 200}
 };
 var Puzzle = mongoose.model('Puzzle', puzzleSchema);
-var clueSchema = {
-    clue : String,
-    answer : String,
-    length : Number
+
+var rateBucketSchema = {
+    created: { type: Date, required: true, default: Date.now },
+    ip: { type: String, required: true, trim: true },
+    path: { type : String, required: true, trim: true },
+    hits: { type: Number, default: 1, required: true },
 }
-var Clue = mongoose.model('Clue', clueSchema);
+var RateBucket = mongoose.model('RateBucket', rateBucketSchema);
 
 module.exports.Puzzle = Puzzle;
-module.exports.Clue = Clue;
+module.exports.RateBucket = RateBucket;

@@ -75,10 +75,15 @@ function createController($scope, $http, Upload) {
     }
 
     $scope.createFailure = function(data, status, headers, config) {
-        $('#errors').text("We were unable to process your image. Please review and submit again.");
-        $('#loadingDiv').css("display", "none");
-        $('#submitBtn').removeAttr("disabled");
-        $('#submitBtn').text("Digitize Puzzle");
+        if (status==429) {
+            $('#errors').text("To reduce burden on our servers, we limit users to 10 puzzles per day. We apologize for the inconvenience.");
+            $('#loadingDiv').css("display", "none");
+        } else {
+            $('#errors').text("We were unable to process your image. Please review and submit again.");
+            $('#loadingDiv').css("display", "none");
+            $('#submitBtn').removeAttr("disabled");
+            $('#submitBtn').text("Digitize Puzzle");
+        } 
     }
 
     $scope.fileSelect = function() {
@@ -663,10 +668,14 @@ function cropController($scope, $http, $routeParams) {
             .success(function(puzzle) {
                 $scope.beginLoading();
                 $scope.pollPuzzle(puzzle._id, 0);
-                console.log(puzzle);
             })
-            .error(function(data) {
-                $('#errors').text("There were some errors in your submission. Please review and submit again.");
+            .error(function(data, status, headers, config) {
+                if (status==429) {
+                    $('#submitBtn').attr("disabled", "disabled");
+                    $('#errors').text("To reduce burden on our servers, we limit users to 10 puzzles per day. We apologize for the inconvenience.");
+                } else {
+                    $('#errors').text("There were some errors in your submission. Please review and submit again.");
+                }
             });
     }
 

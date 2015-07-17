@@ -21,17 +21,20 @@ multiparty = require('connect-multiparty')({uploadDir: require('./server/config'
 // define model =================
 var model = require('./server/model');
 
+// rate limit
+var throttler = require('./server/throttle');
+
 // api ---------------------------------------------------------------------
 var api = require('./server/api');
 
 // create puzzle and return the object
-app.post('/api/puzzles', multiparty, api.create_puzzle);
+app.post('/api/puzzles', throttler.limit, multiparty, api.create_puzzle);
 
 // get puzzle
 app.get('/api/puzzles/:id', api.retrieve_puzzle);
 
 // update puzzle and get crop data
-app.post('/api/puzzles/:id', api.update_puzzle);
+app.post('/api/puzzles/:id', throttler.limit, api.update_puzzle);
 
 // find possible answers
 app.get('/api/puzzles/answers/:id', api.get_possible_answers);
