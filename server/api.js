@@ -125,6 +125,25 @@ module.exports.update_puzzle = function(req, res) {
     });
 }
 
+module.exports.update_clues = function(req, res) {
+    Puzzle.findOne({'_id' : req.params.id}, function(err, puzzle) {
+        if (err) {
+            res.status(400).json({error: err.message});
+        } else {
+            puzzle.slots.forEach(function (slot) {
+                slot.clue = req.body["clue-" + slot.orientation + "-" + slot.position];
+            });
+            puzzle.save(function (err) {
+                if (err) {
+                    res.status(400).json({error: err.message});
+                } else {
+                    res.json(puzzle);
+                }
+            });
+        }
+    });
+}
+
 module.exports.get_possible_answers = function(req, res) {
     Puzzle.findOne({'_id' : req.params.id}, function(err, puzzle) {
         if (err) {

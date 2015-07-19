@@ -39,6 +39,9 @@ app.post('/api/puzzles/:id', throttler.limit, api.update_puzzle);
 // find possible answers
 app.get('/api/puzzles/answers/:id', api.get_possible_answers);
 
+// update clues
+app.post('/api/puzzles/:id/clues', api.update_clues);
+
 // application 
 app.get('/', function (req, res) { 
     res.sendfile('public/index.html'); 

@@ -118,6 +118,7 @@ function puzzleController($scope, $http, $routeParams, $timeout) {
             });
             $('#puzzle-wrapper').crossword(slots);
             $('#clear').css('clear','both');
+            $scope.resetClues();
         })
         .error(function(data) {
             console.log(data);
@@ -132,6 +133,26 @@ function puzzleController($scope, $http, $routeParams, $timeout) {
         })
         .error(function(data) {
             console.log(data);
+        });
+    }
+
+    $scope.saveChangesAndSolve = function() {
+        var clues = {};
+        $('.clue').each(function (clue) {
+            clues[$(this).attr('id')] = $(this).val();
+        });
+        $http.post('/api/puzzles/' + $routeParams.puzzle_id + '/clues', clues)
+            .success(function(data) {
+                $scope.retrieveAnswers();
+            })
+            .error(function(data) {
+                $('#errors').text("Unable to save changes.")
+            })
+    }
+
+    $scope.resetClues = function() {
+        $scope.puzzle.slots.forEach(function (slot) {
+            $('#clue-' + slot.orientation + '-' + slot.position).val(slot.clue);
         });
     }
 
@@ -158,6 +179,7 @@ function puzzleController($scope, $http, $routeParams, $timeout) {
 
     $scope.beginLoading = function() {
         $('#submitBtn').attr("disabled", "disabled");
+        $('#resetBtn').attr("disabled", "disabled");
         $('#submitBtn').text("Searching for possible answers...");
         $('#loadingDiv').css("display", "block");
         $('#errors').text("");
@@ -165,15 +187,23 @@ function puzzleController($scope, $http, $routeParams, $timeout) {
 
     $scope.loadingSuccess = function(puzzle) {
        $scope.puzzle = puzzle;
-       $('#solveForm').css("display", "none");
+       $('#submitBtn').text("Solving Puzzle...");
        $scope.solve2();
     };
 
     $scope.loadingFailure = function(error) {
         $('#submitBtn').removeAttr("disabled");
-        $('#submitBtn').text("Solve Puzzle");
+        $('#resetBtn').removeAttr("disabled");
+        $('#submitBtn').text("Save Clues and Solve");
         $('#loadingDiv').css("display", "none");
         $('#errors').text(error);
+    }
+
+    $scope.puzzleSolved = function() {
+        $('#submitBtn').removeAttr("disabled");
+        $('#resetBtn').removeAttr("disabled");
+        $('#submitBtn').text("Save Clues and Solve");
+        $('#loadingDiv').css("display", "none");
     }
 
     $scope.solve2 = function() {
@@ -405,9 +435,7 @@ function puzzleController($scope, $http, $routeParams, $timeout) {
         }    
 
         solve(board, function(x) {
-            console.log("Done.");
-            console.log(slots);
-
+            $scope.puzzleSolved();
         }, 1);
     }
 

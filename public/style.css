@@ -44,10 +44,14 @@ input.done {
   color: green;
 }
 
-.active,
-.clues-active {
+.active {
   background-color: #ddd;
 }
+
+.clues-active input {
+  background-color: #ddd;
+}
+
 .clue-done {
   color: #999;
   text-decoration: line-through;
@@ -74,4 +78,16 @@ input.done {
 input[readonly] {
   background-color: white !important;
   cursor: text !important;
+}
+.clue {
+  outline: 0;
+  border: 0;
+  width:90%;
+  padding-left: 5px;
+}
+
+.clue:focus {
+  outline: 0;
+  border: 0;
+  background-color: #ddd;
 }

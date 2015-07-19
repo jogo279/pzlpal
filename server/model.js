@@ -12,7 +12,7 @@ var guessSchema = {
     conf : Number
 };
 var slotSchema = {
-    clue : String,
+    clue : { type : String, maxLength: 200 },
     answer : String,
     startx : Number,
     starty : Number,

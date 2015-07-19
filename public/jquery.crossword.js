@@ -142,7 +142,7 @@
           
           
           // click/tab clues 'navigation' handler setup
-          clues.delegate('li', 'click', function(e) {
+          clues.delegate('.clue', 'click', function(e) {
             mode = 'setting ui';
             
             if (!e.keyCode) {
@@ -193,9 +193,10 @@
 
 
             // while we're in here, add clues to DOM!
-            $('#' + puzz.data[i].orientation).append('<li tabindex="1" data-position="' + i + '">' + puzz.data[i].position + ". " + puzz.data[i].clue + '</li>'); 
+            var name = "clue-" + puzz.data[i].orientation + "-" + puzz.data[i].position
+            $('#' + puzz.data[i].orientation).append("<li tabindex='1' data-position='" + i + "'><label for='" + name + "'>" + puzz.data[i].position + ". </label><input class='clue' type='text' name='" + name + "' id='" + name + "'></input></li>");
           }       
-          
+                  
           // Calculate rows/cols by finding max coords of each entry, then picking the highest
           for (var i = 0, p = entryCount; i < p; ++i) {
             for (var x=0; x < entries[i].length; x++) {
@@ -403,20 +404,20 @@
           $('.current').removeClass('current');
           currIndex = 0;
 
-          target = e.target;
-          activePosition = $(e.target).data('position');
+          target = e.target.parentElement;
+          activePosition = $(target).data('position');
           
           util.highlightEntry();
           util.highlightClue();
                     
-          $('.active').eq(0).focus();
-          $('.active').eq(0).select();
+          //$('.active').eq(0).focus();
+          //$('.active').eq(0).select();
           $('.active').eq(0).addClass('current');
           
           // store orientation for 'smart' auto-selecting next input
           currOri = $('.clues-active').parent('ol').prop('id');
                     
-          activeClueIndex = $(clueLiEls).index(e.target);
+          activeClueIndex = $(clueLiEls).index(target);
           //console.log('updateByNav() activeClueIndex: '+activeClueIndex);
           
         },
@@ -469,8 +470,8 @@
           $actives = $('.active');
           $actives.removeClass('active');
           $actives = $('.position-' + activePosition + ' input').addClass('active');
-          $actives.eq(0).focus();
-          $actives.eq(0).select();
+          //$actives.eq(0).focus();
+          //$actives.eq(0).select();
         },
         
         highlightClue: function() {

@@ -2,9 +2,10 @@
   <h1>Puzzle Solving Tool</h1>
   <div>
     <form id="solveForm">
-      <p>Our attempt at digitizing your puzzle is shown below. We apologize for any errors. If you'd like us to try to solve the puzzle, press the button below.</p>
+      <p>Your digitized crossword puzzle is shown below. It's likely that there are some mistakes: for best results, please make corrections before pressing Save Clues and Solve. (You may skip this step and press solve right away, and we'll do our best!)</p>
       <div class="form-group">
-        <button id = "submitBtn" type="submit" class="btn btn-primary btn-md" ng-click="retrieveAnswers()">Solve Puzzle!</button>
+        <button id = "submitBtn" type="submit" class="btn btn-primary btn-md"  style="padding:5px;margin-bottom:5px" ng-click="saveChangesAndSolve()">Save Clues and Solve</button>
+        <button id = "resetBtn" type="submit" class="btn btn-primary btn-md"  style="padding:5px;margin-bottom:5px" ng-click="resetClues()">Reset Clues</button>
       </div>
       <div class="form-group" id="loadingDiv" style="display:none">
         <img src = "loading.gif" id= "loadingImg">
