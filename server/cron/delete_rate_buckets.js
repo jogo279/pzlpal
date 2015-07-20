@@ -1,8 +1,12 @@
-var RateBucket = require('../model').RateBucket;
+var mongoose = require('mongoose');
+mongoose.connect(require('../config').mongo_url);
+var RateBucket = mongoose.model('RateBucket', {})
 RateBucket.remove({}, function(err) {
-  if (err) {
-    console.log(err);
-  } else {
-    console.log("Success");
-  }
-})
+  mongoose.disconnect(function() {
+    if (err) {
+      console.log(err);
+    } else {
+      console.log("Success");
+    }
+  });
+});
