@@ -2,7 +2,7 @@
   <h1>Puzzle Solving Tool</h1>
   <div>
     <form id="solveForm">
-      <p>Your digitized crossword puzzle is shown below. It's likely that there are some mistakes: for best results, please make corrections before pressing Save Clues and Solve. (You may skip this step and press solve right away, and we'll do our best!)</p>
+      <p>Your digitized crossword puzzle is shown below. It's likely that there are some mistakes: for best results, please make corrections before pressing solve. (You may skip this step and press solve right away, and we'll do our best!) If the grid itself is incorrect, please <a href="#/{{puzzle_id}}/crop">go back</a> and try cropping the picture again.</p>
       <div class="form-group">
         <button id = "submitBtn" type="submit" class="btn btn-primary btn-md"  style="padding:5px;margin-bottom:5px" ng-click="saveChangesAndSolve()">Save Clues and Solve</button>
         <button id = "resetBtn" type="submit" class="btn btn-primary btn-md"  style="padding:5px;margin-bottom:5px" ng-click="resetClues()">Reset Clues</button>

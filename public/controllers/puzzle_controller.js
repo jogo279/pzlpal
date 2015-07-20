@@ -1,5 +1,6 @@
 angular.module('pzlPal').controller('puzzleController',  function($scope, $http, $routeParams, $timeout) {
     $scope.puzzle = null;
+    $scope.puzzle_id = $routeParams.puzzle_id;
     $scope.board = [];
 
     $scope.loadPuzzle = function() {
