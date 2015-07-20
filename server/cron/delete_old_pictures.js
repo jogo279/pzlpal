@@ -42,7 +42,7 @@ function remove_folder(location) {
             })
         }, function (err) {
             if (err) { 
-              console.log(err);
+              console.log(err)
               return;
             }
             fs.rmdir(location, function (err) {
