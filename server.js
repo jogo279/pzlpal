@@ -37,7 +37,7 @@ app.get('/api/puzzles/:id', api.retrieve_puzzle);
 app.post('/api/puzzles/:id', throttler.limit, api.update_puzzle);
 
 // find possible answers
-app.get('/api/puzzles/answers/:id', api.get_possible_answers);
+app.get('/api/puzzles/answers/:id', throttler.limit, api.get_possible_answers);
 
 // update clues
 app.post('/api/puzzles/:id/clues', api.update_clues);
