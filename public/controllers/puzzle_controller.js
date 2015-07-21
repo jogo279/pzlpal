@@ -6,7 +6,6 @@ angular.module('pzlPal').controller('puzzleController',  function($scope, $http,
     $scope.loadPuzzle = function() {
         $http.get('api/puzzles/' + $routeParams.puzzle_id)
         .success(function(puzzle) {
-            console.log(puzzle);
             $scope.puzzle = puzzle;
             var slots = puzzle.slots;
             slots.forEach(function(slot) {
@@ -27,8 +26,13 @@ angular.module('pzlPal').controller('puzzleController',  function($scope, $http,
             $scope.beginLoading();
             $scope.pollPuzzle(0);
         })
-        .error(function(data) {
-            console.log(data);
+        .error(function(data, status, headers, config) {
+            if (status==429) {
+                $scope.loadingFailure("To reduce burden on our servers, we limit users to 100 solves per day. We apologize for the inconvenience.");
+                $('#submitBtn').attr("disabled", "disabled");
+            } else {
+                $scope.loadingFailure("We encountered an internal error. We apologize for the inconvenience.");
+            }
         });
     }
 
@@ -74,12 +78,7 @@ angular.module('pzlPal').controller('puzzleController',  function($scope, $http,
                 }
             })
             .error(function(data, status, headers, config) {
-                if (status==429) {
-                    $scope.loadingFailure("To reduce burden on our servers, we limit users to 100 solves per day. We apologize for the inconvenience.");
-                    $('#submitBtn').attr("disabled", "disabled");
-                } else {
-                    $scope.loadingFailure("We encountered an internal error. We apologize for the inconvenience.");
-                }
+                $scope.loadingFailure("We encountered an internal error. We apologize for the inconvenience.");
             });
     };
 
@@ -165,7 +164,6 @@ angular.module('pzlPal').controller('puzzleController',  function($scope, $http,
 
             slots = maxSlots;
             startTime = new Date().getTime();
-            console.log("Pending: " + pending);
             if (pending > 0) solve(maxBoard, cb, 1);
             else cb(true);
         }
@@ -234,8 +232,6 @@ angular.module('pzlPal').controller('puzzleController',  function($scope, $http,
             var slot = slots[slotIndex];
             var possibleAnswer = slot.guesses[possibleAnswerIdx];
             if (!possibleAnswer.name) return false;
-            //console.log(possibleAnswer)
-            //console.log(slot);
             for (var i = 0; i < possibleAnswer.name.length; i++) {
                 var curX = slot.startx;
                 var curY = slot.starty;
@@ -247,11 +243,9 @@ angular.module('pzlPal').controller('puzzleController',  function($scope, $http,
                 var curC = board[curY][curX];
                 // if curC is a real char and is different from what we want to insert
                 if (curC !== ' ' && curC != possibleAnswer.name[i]) {
-                    //console.log("curC is " + curC + " so returning false\n");
                     return false;
                 }
             }
-            //console.log("FITS\n");
             return true;
         }
 

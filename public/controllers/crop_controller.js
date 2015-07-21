@@ -23,7 +23,6 @@ angular.module('pzlPal').controller('cropController', function($scope, $http, $r
             onChange: $scope.showPreview,
             onSelect: $scope.showPreview
         });
-        console.log($scope.puzzle);
         if ($scope.puzzle.grid_coords) $scope.addGrid($scope.puzzle.grid_coords);
         $scope.puzzle.across_coords.forEach($scope.addAcross);
         $scope.puzzle.down_coords.forEach($scope.addDown);
