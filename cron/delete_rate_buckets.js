@@ -1,5 +1,5 @@
 var mongoose = require('mongoose');
-mongoose.connect(require('../config').mongo_url);
+mongoose.connect(require('../server/config').mongo_url);
 var RateBucket = mongoose.model('RateBucket', {});
 console.log("Deleting Rate Buckets...");
 RateBucket.remove({}, function(err) {

@@ -2,20 +2,20 @@ var fs = require('fs');
 var async = require('async');
 
 console.log("Deleting old pictures...");
-fs.readdir(require('./../config').app_dir + '/public/images', function(err, files) {
+fs.readdir(require('../server/config').app_dir + '/public/images', function(err, files) {
   if (err) {
     console.log(err);
     return;
   }
   files.forEach(function(file) {
-    fs.stat(require('./../config').app_dir + '/public/images/' + file, function(err, stats) {
+    fs.stat(require('../server/config').app_dir + '/public/images/' + file, function(err, stats) {
       if (err) {
         console.log(err);
         return;
       }
       var now = new Date();
       if (stats.isDirectory() && now - stats.mtime > 24 * 60 * 60 * 1000 ) {
-        remove_folder(require('./../config').app_dir + '/public/images/' + file);
+        remove_folder(require('../server/config').app_dir + '/public/images/' + file);
       }
     })
   })
