@@ -259,7 +259,12 @@ function get_text(id,  cb) {
       var file_id = JSON.parse(body).data.file_id;
       request.get('http://api.newocr.com/v1/ocr?key=' + require('./config').newocr_key + '&page=1&lang=eng&psm=6&file_id=' + file_id, 
         function(err, response, body) {
-          cb(null, JSON.parse(body).data.text);
+          var data = JSON.parse(body).data;
+          if (data) {
+            cb(null, data.text);
+          } else {
+            cb(null, "");
+          }
         });
     }
   });

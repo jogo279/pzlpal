@@ -5,5 +5,3 @@ module.exports.solr_port = process.env.SOLR_PORT || 8080
 module.exports.solr_path = process.env.SOLR_PATH || "/solr"
 module.exports.newocr_key = process.env.NEWOCR_KEY || ""
 module.exports.app_dir = process.env.APP_DIR || ""
-module.exports.rate_limit_duration = process.env.RATE_LIMIT_DURATION || 24 * 60 * 60 * 1000
-module.exports.rate_limit_max_hits = process.env.RATE_LIMIT_MAX_HITS || 10

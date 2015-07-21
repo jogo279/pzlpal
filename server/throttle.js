@@ -1,12 +1,8 @@
 /* Rate limiter for creating puzzles and digitizing puzzles */
 var RateBucket = require('./model').RateBucket;
-var duration = require('./config').rate_limit_duration;
-var max_hits = require('./config').rate_limit_max_hits;
+RateBucket.find({}).remove(); // remove all on start up
 
-// remove all on start up
-RateBucket.find({}).remove();
-
-exports.limit = function(request, response, next) {  
+exports.limit = function(duration, max_hits, request, response, next) {  
     var ip = request.headers['x-forwarded-for'] ||
         request.connection.remoteAddress ||
         request.socket.remoteAddress;
@@ -33,7 +29,7 @@ exports.limit = function(request, response, next) {
                     }
                     if(!rateBucket) {
                         response.statusCode = 500;
-                        return response.json({error: "RateLimit", message: 'Cant\' create rate limit bucket'});
+                        return response.json({error: "RateLimit", message: 'Can\'t create rate limit bucket'});
                     }
                     request.rateBucket = rateBucket;
                     return next();

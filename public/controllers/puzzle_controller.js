@@ -41,8 +41,13 @@ angular.module('pzlPal').controller('puzzleController',  function($scope, $http,
             .success(function(data) {
                 $scope.retrieveAnswers();
             })
-            .error(function(data) {
-                $('#errors').text("Unable to save changes.")
+            .error(function(data, status, headers, config) {
+                if (status==429) {
+                    $('#errors').text("To reduce burden on our servers, we limit users to 100 solves per day. We apologize for the inconvenience.");
+                    $('#submitBtn').attr("disabled", "disabled");
+                } else {
+                    $('#errors').text("Unable to save changes.");
+                }   
             })
     }
 
@@ -68,8 +73,13 @@ angular.module('pzlPal').controller('puzzleController',  function($scope, $http,
                     $scope.loadingSuccess(puzzle);
                 }
             })
-            .error(function(data) {
-                $scope.loadingFailure("Puzzle not found.");
+            .error(function(data, status, headers, config) {
+                if (status==429) {
+                    $scope.loadingFailure("To reduce burden on our servers, we limit users to 100 solves per day. We apologize for the inconvenience.");
+                    $('#submitBtn').attr("disabled", "disabled");
+                } else {
+                    $scope.loadingFailure("We encountered an internal error. We apologize for the inconvenience.");
+                }
             });
     };
 

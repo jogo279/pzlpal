@@ -28,24 +28,61 @@ var throttler = require('./server/throttle');
 var api = require('./server/api');
 
 // create puzzle and return the object
-app.post('/api/puzzles', throttler.limit, multiparty, api.create_puzzle);
+app.post(
+  '/api/puzzles', 
+  function(request, response, next) { 
+    return throttler.limit(24 * 60 * 60 * 1000, 10, request, response, next);
+  }, 
+  multiparty, 
+  api.create_puzzle
+);
 
 // get puzzle
-app.get('/api/puzzles/:id', api.retrieve_puzzle);
+app.get(
+  '/api/puzzles/:id',
+  function(request, response, next) { 
+    return throttler.limit(60 * 1000, 100, request, response, next);
+  },
+  api.retrieve_puzzle
+);
 
 // update puzzle and get crop data
-app.post('/api/puzzles/:id', throttler.limit, api.update_puzzle);
+app.post(
+  '/api/puzzles/:id', 
+  function(request, response, next) { 
+    return throttler.limit(24 * 60 * 60 * 1000, 10, request, response, next);
+  },
+  api.update_puzzle
+);
 
 // find possible answers
-app.get('/api/puzzles/answers/:id', api.get_possible_answers);
+app.get(
+  '/api/puzzles/answers/:id', 
+  function(request, response, next) { 
+    return throttler.limit(24 * 60 * 60 * 1000, 100, request, response, next);
+  },
+  api.get_possible_answers
+);
 
 // update clues
-app.post('/api/puzzles/:id/clues', api.update_clues);
+app.post(
+  '/api/puzzles/:id/clues',
+  function(request, response, next) { 
+    return throttler.limit(24 * 60 * 60 * 1000, 100, request, response, next);
+  },
+  api.update_clues
+);
 
 // application 
-app.get('/', function (req, res) { 
+app.get(
+  '/', 
+  function(request, response, next) { 
+    return throttler.limit(60 * 1000, 100, request, response, next);
+  },
+  function (req, res) { 
     res.sendfile('public/index.html'); 
-});
+  }
+);
 
 // listen (start app with node server.js) ======================================
 app.listen(app.get('port'));

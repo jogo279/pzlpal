@@ -177,7 +177,7 @@ angular.module('pzlPal').controller('cropController', function($scope, $http, $r
                 }
             })
             .error(function(data) {
-                $scope.loadingFailure("Puzzle not found.");
+                $scope.loadingFailure("We encountered an internal error. We apologize for the inconvenience.");
             });
     };
 
