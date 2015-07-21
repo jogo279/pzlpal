@@ -8,12 +8,10 @@ PzlPal is a web app which solves crossword puzzles from just a picture (e.g. fro
 
 ### Running the website
 
-`
-git clone https://github.com/jogo279/pzlpal.git
-cd pzlpal
-npm install
-node server.js
-`
+> git clone https://github.com/jogo279/pzlpal.git
+> cd pzlpal
+> npm install
+> node server.js
 
 There are also some environment variables which need to be set: see server/config.js. 
 
