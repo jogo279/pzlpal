@@ -8,7 +8,7 @@ angular.module('pzlPal').controller('createController', function($scope, $http, 
         {name: "Example 5", url: "http://i.imgur.com/8fr6qzG.png"},
         {name: "Example 6", url: "http://i.imgur.com/gAm5tkN.jpg"}
     ];
-    // when submitting the add form, send the text to the node API
+    
     $scope.createPuzzle = function() {
         $('#errors').text("");
         $('#submitBtn').attr("disabled", "disabled");

@@ -3,6 +3,7 @@ var fs = require('fs');
 var cp = require('child_process');
 var request = require('request');
 
+// build puzzle
 module.exports.create_puzzle = function(req, res) {
 
     function createEmptyPuzzle(cb) {
@@ -125,6 +126,7 @@ module.exports.update_puzzle = function(req, res) {
     });
 }
 
+// update clues if user changes anything on the solve page
 module.exports.update_clues = function(req, res) {
     Puzzle.findOne({'_id' : req.params.id}, function(err, puzzle) {
         if (err) {
@@ -144,6 +146,7 @@ module.exports.update_clues = function(req, res) {
     });
 }
 
+// get guesses for each slot via solr
 module.exports.get_possible_answers = function(req, res) {
     Puzzle.findOne({'_id' : req.params.id}, function(err, puzzle) {
         if (err) {

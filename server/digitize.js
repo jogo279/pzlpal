@@ -11,11 +11,11 @@ module.exports.digitize = function(id, crop_width, crop_height, grid_coords, acr
   Puzzle.findOne({ '_id' : id}, function(err, puzzle) {
     if (err) return clean_up(puzzle, err);
 
-    // Set up workspace
     var dir = require('./config').app_dir + '/public/images/' + id + '/';
 
-    // Scale grid
-    scale(id, crop_width, crop_height, grid_coords, function(scaled_coords) {
+    // Scale grid coords for input into python script
+    scale(id, crop_width, crop_height, grid_coords, function(err, scaled_coords) {
+      if (err) return clean_up(puzzle, err);
 
       // Find slots
       get_slots(dir + 'original.png', puzzle.gridWidth, puzzle.gridHeight, scaled_coords, function(err, slots, across_slot_nums, down_slot_nums) {
@@ -61,10 +61,6 @@ module.exports.digitize = function(id, crop_width, crop_height, grid_coords, acr
           });            
         });            
       });
-
-
-
-
     });
   });
 }
@@ -75,9 +71,12 @@ module.exports.digitize = function(id, crop_width, crop_height, grid_coords, acr
 function scale(id, crop_width, crop_height, coords, cb) {
   var dir = require('./config').app_dir + '/public/images/' + id + '/';
   sizeOf(dir + 'original.png', function(err, dimensions) {
+    if (err) {
+      cb(err, null);
+    }
     var real_width = dimensions.width;
     var real_height = dimensions.height;
-    cb({
+    cb(null, {
       x : coords.x * real_width / crop_width,
       y : coords.y * real_height / crop_height,
       x2 : coords.x2 * real_width / crop_width,
@@ -168,6 +167,10 @@ function build_clues_image(id, across_coords, down_coords, crop_width, crop_heig
   var dir = require('./config').app_dir + '/public/images/' + id + '/';
   // Get image dimensions and stretch coordinates based on difference between crop dimensions and real dimensions
   sizeOf(dir + 'original.png', function(err, dimensions) {
+    if (err) {
+      cb(err);
+      return;
+    }
     var real_width = dimensions.width;
     var real_height = dimensions.height;
     across_coords = across_coords.map(function (coords, idx) {

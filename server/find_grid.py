@@ -9,11 +9,14 @@ import sys
 img_path = sys.argv[1] # first parameter is image path
 width_squares = int(sys.argv[2]) # second parameter is number of squares wide the puzzle is
 height_squares = int(sys.argv[3]) # third parameter is the number of squares tall the puzzle is
+
+# These 4 inputs are the coordinates provided by the user, but aren't 100% trusted
 grid_x = float(sys.argv[4])
 grid_y = float(sys.argv[5])
 grid_w = float(sys.argv[6])
 grid_h = float(sys.argv[7])
 
+# Load and preprocess image
 img = cv2.imread(img_path)    
 gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)    
 gaussian = cv2.GaussianBlur(gray,(3,3),0)
@@ -24,7 +27,7 @@ max_area = -1
 max_cnt = None 
 height, width = img.shape[1::-1]
 
-# find contours with maximum area
+# find contours with maximum area and close to the user provided coordinates
 for cnt in contours:
     approx = cv2.approxPolyDP(cnt, 0.02*cv2.arcLength(cnt,True), True)
     if len(approx) == 4:
@@ -35,6 +38,7 @@ for cnt in contours:
                 max_cnt = cnt
                 max_approx = approx
 
+# no good contour found so just go with the user coordinates
 if max_cnt is None:
     cross_rect = thresh2[grid_y:grid_y+grid_h, grid_x:grid_x+grid_w]
     cross_rect = cv2.resize(cross_rect,(width_squares*10,height_squares*10))
@@ -55,7 +59,8 @@ else:
     cross_rot = np.zeros((width_squares,height_squares))
     cross_no_rot = np.zeros((width_squares,height_squares))
 
-    # try accounting for rotation
+    # account for rotation with getPerspectiveTransform
+    # first need to get corners of the contour in a known order
     old_pts = max_approx.reshape(4,2).astype('float32')
     new_pts = np.zeros((4, 2), dtype = "float32")
     avg_x = 0.25*(old_pts[0][0] + old_pts[1][0] + old_pts[2][0] + old_pts[3][0])
@@ -95,6 +100,7 @@ else:
             if white > 30 and white < 70:
                 iffy_no_rot += 1
 
+    # make choice based on number of "iffy squares" (not very white or very black)
     if iffy_rot < iffy_no_rot:
         print('\n'.join([''.join(['{:4}'.format(item.astype(np.int64)) for item in row]) 
               for row in cross_rot]))

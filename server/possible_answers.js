@@ -1,3 +1,5 @@
+/* possible_answers checks solr to get a list of possible answers for each slot
+ * of a puzzle based on the clue. */
 var model = require('./model');
 var Puzzle = model.Puzzle;
 var async = require('async');
@@ -38,9 +40,10 @@ module.exports.retrieve = function(id) {
   });
 }
 
+/* First tries searching the exact clue. If not, tries to match as many words as possible. */
 function solr_guesses(clue, length, cb) {
 
-  /* inexact match query */
+  /* inexact match query - OR all the words in the clue */
   var clue_query = clue.split(/[\s-]+/).map(function (str) {
     return str.trim().replace(/[^a-z0-9-_]/gi,'');
   }).filter(function (str) {
@@ -50,6 +53,8 @@ function solr_guesses(clue, length, cb) {
     cb(null, {});
     return;
   }
+
+  /* Query for 100, and take the top 15 after grouping identical answers */
   var query_inexact_str = "length:" + length + " AND " + "clue:" + clue_query;
   var query_inexact = client.createQuery().q(query_inexact_str).restrict('score').start(0).rows(100);
 
@@ -73,6 +78,7 @@ function solr_guesses(clue, length, cb) {
               return {name: doc.answer, conf: doc.score};
             });
 
+            /* Cap confidence at 999 for inexact matches */
             var grouped_guesses =
               Enumerable.from(guesses).groupBy(function(x){ return x.name; })
                 .select(function(x){
@@ -88,6 +94,7 @@ function solr_guesses(clue, length, cb) {
           }
         });
       } else {
+        /* Confidence 1000 per exact match */
         var grouped_guesses =
           Enumerable.from(guesses).groupBy(function(x){ return x.name; })
             .select(function(x){

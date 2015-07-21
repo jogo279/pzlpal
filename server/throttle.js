@@ -1,8 +1,9 @@
+/* Rate limiter for creating puzzles and digitizing puzzles */
 var RateBucket = require('./model').RateBucket;
 var duration = require('./config').rate_limit_duration;
 var max_hits = require('./config').rate_limit_max_hits;
 
-// remove all on start
+// remove all on start up
 RateBucket.find({}).remove();
 
 exports.limit = function(request, response, next) {  

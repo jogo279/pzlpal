@@ -1,4 +1,3 @@
-
 /**
 * Jesse Weisbeck's Crossword Puzzle (for all 3 people left who want to play them)
 *
