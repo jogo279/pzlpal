@@ -7,82 +7,55 @@ var sizeOf = require('image-size');
 var async = require('async');
 var request = require('request');
 
-module.exports.digitize = function(id, crop_width, crop_height, grid_coords, across_coords, down_coords) {
+module.exports.digitize = function(id) {
   Puzzle.findOne({ '_id' : id}, function(err, puzzle) {
     if (err) return clean_up(puzzle, err);
 
     var dir = require('./config').app_dir + '/public/images/' + id + '/';
 
-    // Scale grid coords for input into python script
-    scale(id, crop_width, crop_height, grid_coords, function(err, scaled_coords) {
+    // Find slots
+    get_slots(dir + 'original.png', puzzle.gridWidth, puzzle.gridHeight, puzzle.grid_coords, function(err, slots, across_slot_nums, down_slot_nums) {
       if (err) return clean_up(puzzle, err);
 
-      // Find slots
-      get_slots(dir + 'original.png', puzzle.gridWidth, puzzle.gridHeight, scaled_coords, function(err, slots, across_slot_nums, down_slot_nums) {
+      // Build clues image
+      build_clues_image(puzzle._id, puzzle.across_coords, puzzle.down_coords, function(err, text) {
         if (err) return clean_up(puzzle, err);
 
-        // Build clues image
-        build_clues_image(puzzle._id, across_coords, down_coords, crop_width, crop_height, function(err, text) {
+        // Get text from image
+        get_text(puzzle._id, function(err, text) {
           if (err) return clean_up(puzzle, err);
 
-          // Get text from image
-          get_text(puzzle._id, function(err, text) {
+          // Split up text into clues
+          get_clues(text, across_slot_nums, down_slot_nums, function (err, across_clues, down_clues) {
             if (err) return clean_up(puzzle, err);
 
-            // Split up text into clues
-            get_clues(text, across_slot_nums, down_slot_nums, function (err, across_clues, down_clues) {
-              if (err) return clean_up(puzzle, err);
-
-              // Add clues to slots and save
-              slots.forEach(function(slot) {
-                if (slot.orientation == "across") {
-                  slot.clue = across_clues[slot.position];
-                  if (slot.clue == null) {
-                    slot.clue = "";
-                  }
-                } else {
-                  slot.clue = down_clues[slot.position];
-                  if (slot.clue == null) {
-                    slot.clue = "";
-                  }
+            // Add clues to slots and save
+            slots.forEach(function(slot) {
+              if (slot.orientation == "across") {
+                slot.clue = across_clues[slot.position];
+                if (slot.clue == null) {
+                  slot.clue = "";
                 }
-              });
-              Puzzle.update({_id: id}, {'$set': {
-                'digitizing_status': 'success',
-                'slots': slots
-              }}, function(err) {
-                if (err) {
-                  console.log(err.stack);
-                } else {
-                  console.log("Success");
+              } else {
+                slot.clue = down_clues[slot.position];
+                if (slot.clue == null) {
+                  slot.clue = "";
                 }
-              });
+              }
             });
-          });            
+            Puzzle.update({_id: id}, {'$set': {
+              'digitizing_status': 'success',
+              'slots': slots
+            }}, function(err) {
+              if (err) {
+                console.log(err.stack);
+              } else {
+                console.log("Success");
+              }
+            });
+          });
         });            
-      });
-    });
-  });
-}
-
-
-
-/* Scales coords according to how image was scaled */
-function scale(id, crop_width, crop_height, coords, cb) {
-  var dir = require('./config').app_dir + '/public/images/' + id + '/';
-  sizeOf(dir + 'original.png', function(err, dimensions) {
-    if (err) {
-      cb(err, null);
-    }
-    var real_width = dimensions.width;
-    var real_height = dimensions.height;
-    cb(null, {
-      x : coords.x * real_width / crop_width,
-      y : coords.y * real_height / crop_height,
-      x2 : coords.x2 * real_width / crop_width,
-      y2 : coords.y2 * real_height / crop_height,
-      w : coords.w * real_width / crop_width,
-      h : coords.h * real_height / crop_height,
+      });            
     });
   });
 }
@@ -159,79 +132,70 @@ function get_slots(file, width, height, grid_coords, cb) {
 
 
 /* Given crop data from user, construct a single image containing only the clues via ImageMagick */
-function build_clues_image(id, across_coords, down_coords, crop_width, crop_height, cb) {
+function build_clues_image(id, across_coords, down_coords, cb) {
+  var dir = require('./config').app_dir + '/public/images/' + id + '/';
   // limit to 10 images each
   across_coords = across_coords.slice(0, 10);
   down_coords = down_coords.slice(0, 10);
 
-  var dir = require('./config').app_dir + '/public/images/' + id + '/';
-  // Get image dimensions and stretch coordinates based on difference between crop dimensions and real dimensions
-  sizeOf(dir + 'original.png', function(err, dimensions) {
-    if (err) {
-      cb(err);
-      return;
+  across_coords = across_coords.map(function (coords, idx) {
+    return {
+      x : coords.x,
+      y : coords.y,
+      x2 : coords.x2,
+      y2 : coords.y2,
+      w : coords.w,
+      h : coords.h,
+      orientation : "across",
+      idx: idx
     }
-    var real_width = dimensions.width;
-    var real_height = dimensions.height;
-    across_coords = across_coords.map(function (coords, idx) {
-      return {
-        x : coords.x * real_width / crop_width,
-        y : coords.y * real_height / crop_height,
-        x2 : coords.x2 * real_width / crop_width,
-        y2 : coords.y2 * real_height / crop_height,
-        w : coords.w * real_width / crop_width,
-        h : coords.h * real_height / crop_height,
-        orientation : "across",
-        idx: idx
-      }
-    });
-    down_coords = down_coords.map(function (coords, idx) {
-      return {
-        x : coords.x * real_width / crop_width,
-        y : coords.y * real_height / crop_height,
-        x2 : coords.x2 * real_width / crop_width,
-        y2 : coords.y2 * real_height / crop_height,
-        w : coords.w * real_width / crop_width,
-        h : coords.h * real_height / crop_height,
-        orientation : "down",
-        idx: idx
-      }
-    });
-
-    // Build image for each piece
-    async.each(
-      across_coords.concat(down_coords),
-      function (coords, cb) {
-        var image_name = coords.orientation + "-" + coords.idx;
-        cp.exec(
-           "convert -extract " + coords.w + "x" + coords.h + "+" + coords.x + "+" + coords.y + " " + dir + 'original.png '  + dir + image_name + ".jpg",
-           function (err, stdout, stderr) {
-            if (err) {
-              cb(err);
-              return;
-            }
-            cb(null);
-           }
-        );
-      },
-      function (err) {
-        if (err) {
-          cb(err);
-          return;
-        }
-
-        // Combine the images
-        cp.exec(
-          "convert " + dir + "across-*.jpg -append " + dir + "across.jpg &&" +
-          "convert " + dir + "down-*.jpg -append " + dir + "down.jpg &&" +
-          "convert " + dir + "across.jpg " + dir + "down.jpg -append " + dir + "clues.jpg",
-          function (err, stdout, stderr) {
-            cb(err);
-          }
-        );
-      }
-    );
   });
+  down_coords = down_coords.map(function (coords, idx) {
+    return {
+      x : coords.x,
+      y : coords.y,
+      x2 : coords.x2,
+      y2 : coords.y2,
+      w : coords.w,
+      h : coords.h,
+      orientation : "down",
+      idx: idx
+    }
+  });
+
+  // Build image for each piece
+  async.each(
+    across_coords.concat(down_coords),
+    function (coords, cb) {
+      var image_name = coords.orientation + "-" + coords.idx;
+      cp.exec(
+         "convert -extract " + coords.w + "x" + coords.h + "+" + coords.x + "+" + coords.y + " " + dir + 'original.png '  + dir + image_name + ".jpg",
+         function (err, stdout, stderr) {
+          if (err) {
+            cb(err);
+            return;
+          }
+          cb(null);
+         }
+      );
+    },
+    function (err) {
+      if (err) {
+        cb(err);
+        return;
+      }
+
+      // Combine the images
+      cp.exec(
+        "convert " + dir + "across-*.jpg -append " + dir + "across.jpg &&" +
+        "convert " + dir + "down-*.jpg -append " + dir + "down.jpg &&" +
+        "convert " + dir + "across.jpg " + dir + "down.jpg -append " + dir + "clues.jpg",
+        function (err, stdout, stderr) {
+          cb(err);
+        }
+      );
+    }
+  );
 }
 
 /* Extract text from an image. First tries NewOCR, and then tesseract if that fails. */

@@ -24,6 +24,8 @@ var slotSchema = {
 var puzzleSchema = {
     digitizing_status : {type : String, enum: ['waiting', 'digitizing', 'success', 'failure']},
     answers_status : {type : String, enum: ['waiting', 'retrieving', 'success', 'failure']},
+    image_width : Number,
+    image_height : Number,
     slots : [slotSchema],
     grid_coords : coordSchema,
     across_coords : [coordSchema],

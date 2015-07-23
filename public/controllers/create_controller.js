@@ -37,6 +37,7 @@ angular.module('pzlPal').controller('createController', function($scope, $http, 
 
     $scope.createSuccess = function(data, status, headers, config) {
         $location.path("/" + data._id + "/crop");
+        console.log(data);
     }
 
     $scope.createFailure = function(data, status, headers, config) {

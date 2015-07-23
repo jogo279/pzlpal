@@ -2,6 +2,7 @@ var Puzzle = require('./model').Puzzle;
 var fs = require('fs');
 var cp = require('child_process');
 var request = require('request');
+var sizeOf = require('image-size');
 
 // build puzzle
 module.exports.create_puzzle = function(req, res) {
@@ -40,7 +41,21 @@ module.exports.create_puzzle = function(req, res) {
                             if (err) {
                                 res.status(400).json({error: err.message});
                             } else {
-                                res.json(puzzle);
+                                sizeOf(require('./config').app_dir + '/public/images/' + id + "/original.png", function(err, dimensions) {
+                                    if (err) {
+                                        res.status(400).json({error: err.message});
+                                    } else {
+                                        puzzle.image_width = dimensions.width;
+                                        puzzle.image_height = dimensions.height;
+                                        puzzle.save(function (err) {
+                                            if (err) {
+                                                res.status(400).json({error: err.message});
+                                            } else {
+                                                res.json(puzzle);
+                                            }
+                                        });
+                                    }
+                                });
                                 fs.unlink(file.path);
                             }
                         }
@@ -72,7 +87,21 @@ module.exports.create_puzzle = function(req, res) {
                                     if (err) {
                                         res.status(400).json({error: err.message});
                                     } else {
-                                        res.json(puzzle);
+                                        sizeOf(require('./config').app_dir + '/public/images/' + id + "/original.png", function(err, dimensions) {
+                                            if (err) {
+                                                res.status(400).json({error: err.message});
+                                            } else {
+                                                puzzle.image_width = dimensions.width;
+                                                puzzle.image_height = dimensions.height;
+                                                puzzle.save(function (err) {
+                                                    if (err) {
+                                                        res.status(400).json({error: err.message});
+                                                    } else {
+                                                        res.json(puzzle);
+                                                    }
+                                                });
+                                            }
+                                        });
                                     }
                                 }
                             );
@@ -104,22 +133,15 @@ module.exports.update_puzzle = function(req, res) {
             puzzle.gridWidth = req.body.gridWidth;
             puzzle.gridHeight = req.body.gridHeight;
             puzzle.digitizing_status = "digitizing"
-            puzzle.grid_coords = req.body.grid_coords;
-            puzzle.across_coords = req.body.across_coords;
-            puzzle.down_coords = req.body.down_coords;
+            puzzle.grid_coords = req.body.scaled_grid_coords;
+            puzzle.across_coords = req.body.scaled_across_coords;
+            puzzle.down_coords = req.body.scaled_down_coords;
             puzzle.save(function (err) {
                 if (err) {
                     res.status(400).json({error: err.message});
                 } else {
                     res.json(puzzle);
-                    require('./digitize').digitize(
-                        puzzle._id, 
-                        req.body.image_width,
-                        req.body.image_height,
-                        req.body.grid_coords,
-                        req.body.across_coords,
-                        req.body.down_coords
-                    );
+                    require('./digitize').digitize(puzzle._id);
                 }
             });
         }

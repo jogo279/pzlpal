@@ -23,9 +23,33 @@ angular.module('pzlPal').controller('cropController', function($scope, $http, $r
             onChange: $scope.showPreview,
             onSelect: $scope.showPreview
         });
-        if ($scope.puzzle.grid_coords) $scope.addGrid($scope.puzzle.grid_coords);
-        $scope.puzzle.across_coords.forEach($scope.addAcross);
-        $scope.puzzle.down_coords.forEach($scope.addDown);
+        console.log($scope.puzzle)
+        if ($scope.puzzle.grid_coords) $scope.addGrid($scope.scaleCoords($scope.puzzle.grid_coords, true));
+        $scope.puzzle.across_coords.forEach(function(coords) { $scope.addAcross($scope.scaleCoords(coords, true)) });
+        $scope.puzzle.down_coords.forEach(function(coords) { $scope.addDown($scope.scaleCoords(coords, true)) });
+    }
+
+    $scope.scaleCoords = function(coords, from_original) {
+        if (from_original) {
+            var source_width = $scope.puzzle.image_width * 1.0;
+            var source_height = $scope.puzzle.image_height * 1.0;
+            var target_width = $('#jcrop_target').width();
+            var target_height = $('#jcrop_target').height();
+        } else {
+            var target_width = $scope.puzzle.image_width * 1.0;
+            var target_height = $scope.puzzle.image_height * 1.0;
+            var source_width = $('#jcrop_target').width();
+            var source_height = $('#jcrop_target').height();
+        }
+
+        return {
+            x: coords.x * target_width / source_width,
+            y: coords.y * target_height / source_height,
+            x2: coords.x2 * target_width / source_width,
+            y2: coords.y2 * target_height / source_height,
+            w: coords.w * target_width / source_width,
+            h: coords.h * target_height / source_height
+        };
     }
 
     $scope.scaleImage = function(coords, container_id) {
@@ -144,6 +168,10 @@ angular.module('pzlPal').controller('cropController', function($scope, $http, $r
             $('#errors').text("Too many pictures added.");
             return;
         }
+
+        $scope.formData.scaled_grid_coords = $scope.scaleCoords($scope.formData.grid_coords, false);
+        $scope.formData.scaled_across_coords = $scope.formData.across_coords.map(function (coords) { return $scope.scaleCoords(coords, false)});
+        $scope.formData.scaled_down_coords = $scope.formData.down_coords.map(function (coords) { return $scope.scaleCoords(coords, false)});
 
         $http.post('/api/puzzles/' + $scope.puzzle._id, $scope.formData)
             .success(function(puzzle) {
