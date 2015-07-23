@@ -363,6 +363,9 @@ function similar_to(num, str) {
       case '1':
         if (c!='i' && c!='I' && c!='[' && c!= ']' && c!= '|' && c!='l' && c!="'") return false;
         break;
+      case '2':
+        if (c!='z' && c!='Z') return false;
+        break;
       case '5':
         if (c!='S') return false;
         break;
