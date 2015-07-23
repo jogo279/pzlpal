@@ -1,4 +1,4 @@
-angular.module('pzlPal').controller('cropController', function($scope, $http, $routeParams) {
+angular.module('pzlPal').controller('cropController', function($scope, $http, $routeParams, $location) {
 
     $scope.formData = {
         preview_coords : {w : 0, h : 0, x : 0, y : 0, x2 : 0, y2 : 0 },
@@ -188,7 +188,8 @@ angular.module('pzlPal').controller('cropController', function($scope, $http, $r
     };
 
     $scope.loadingSuccess = function(id) {
-        window.location.hash = "#/" + id + "/view"
+        $location.path("/" + id + "/view");
+
     };
 
     $scope.loadingFailure = function(error) {

@@ -1,4 +1,4 @@
-angular.module('pzlPal').controller('createController', function($scope, $http, Upload) {
+angular.module('pzlPal').controller('createController', function($scope, $http, Upload, $location) {
     $scope.formData = {};
     $scope.examples = [
         {name: "Example 1", url: "http://i.imgur.com/AiI3G0X.gif"},
@@ -36,7 +36,7 @@ angular.module('pzlPal').controller('createController', function($scope, $http, 
     }
 
     $scope.createSuccess = function(data, status, headers, config) {
-        window.location.hash = "#/" + data._id + "/crop";
+        $location.path("/" + data._id + "/crop");
     }
 
     $scope.createFailure = function(data, status, headers, config) {
