@@ -84,6 +84,7 @@ angular.module('pzlPal').controller('cropController', function($scope, $http, $r
 
     $scope.addAcross = function(coords) {
         coords = typeof coords !== 'undefined' ? coords : $scope.formData.preview_coords;
+        if ($.inArray(coords, $scope.formData.across_coords) >= 0) return;
         if (coords.w > 5 && coords.h > 5) {
             $scope.formData.across_coords.push(coords);
             $('#across-container').append("<div style='overflow:hidden;float:left;margin:5px' id = 'across-" + $scope.formData.across_coords.length + "'><img src='" + $scope.puzzle.imageURL + "'></div>");
@@ -98,6 +99,7 @@ angular.module('pzlPal').controller('cropController', function($scope, $http, $r
 
     $scope.addDown = function(coords) {
         coords = typeof coords !== 'undefined' ? coords : $scope.formData.preview_coords;
+        if ($.inArray(coords, $scope.formData.down_coords) >= 0) return;
         if (coords.w > 5 && coords.h > 5) {
             $scope.formData.down_coords.push(coords);
             $('#down-container').append("<div style='overflow:hidden;float:left;margin:5px' id = 'down-" + $scope.formData.down_coords.length + "'><img src='" + $scope.puzzle.imageURL + "'></div>");

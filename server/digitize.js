@@ -346,12 +346,16 @@ function extract_num(str, num) {
 
 /* Check if string starts with something like the number. */
 function similar_to(num, str) {
+  var one_digit = false;
   var digits = num.toString().split('');
   var chars = str.replace(/\s+/g, '').split('');
   if (chars.length < digits.length) return false;
   for (var i = 0; i < digits.length; i++) {
     var c = chars[i];
-    if (c==digits[i]) continue;
+    if (c==digits[i]) {
+      one_digit = true;
+      continue;
+    }
     switch (digits[i]) {
       case '0':
         if (c!='o' && c!='O' && c!='6' && c!= '8') return false;
@@ -375,7 +379,7 @@ function similar_to(num, str) {
         break;
     }
   }
-  return true;
+  return one_digit;
 }
 
 function clean_up(puzzle, err) {
