@@ -1,5 +1,5 @@
 angular
-    .module('pzlPal', ['ngFileUpload'])
+    .module('pzlPal', ['ngFileUpload', 'ngRoute'])
     .directive('imageonload', function() {
         return {
             restrict: 'A',
