@@ -6,7 +6,7 @@ angular.module('pzlPal').controller('createController', function($scope, $http, 
         {name: "Example 3", url: "http://i.imgur.com/6fwD9rh.jpg"},
         {name: "Example 4", url: "http://i.imgur.com/aL7mGRF.jpg"},
         {name: "Example 5", url: "http://i.imgur.com/8fr6qzG.png"},
-        {name: "Example 6", url: "http://i.imgur.com/xFJFaiP.png"}
+        {name: "Example 6", url: "http://i.imgur.com/vxGGrZb.png"}
     ];
     
     $scope.createPuzzle = function() {
