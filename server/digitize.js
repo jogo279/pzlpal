@@ -379,7 +379,7 @@ function similar_to(num, str) {
         break;
     }
   }
-  return one_digit;
+  return num >= 10 || one_digit;
 }
 
 function clean_up(puzzle, err) {
